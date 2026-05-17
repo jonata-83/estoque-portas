@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -74,7 +75,7 @@
   .badge{border-radius:6px;padding:3px 8px;font-size:12px}
 
 
-  .hist-emoji{font-size:15px;flex-shrink:0;cursor:pointer;padding:0 8px;line-height:1;user-select:none;-webkit-user-select:none;opacity:0.85;transition:opacity .2s;border-right:1px solid var(--border);align-self:stretch;display:flex;align-items:center;justify-content:center}
+  .hist-emoji{font-size:15px;flex-shrink:0;cursor:pointer;padding:0 4px;line-height:1;user-select:none;-webkit-user-select:none;opacity:0.85;transition:opacity .2s;border-right:1px solid var(--border);align-self:stretch;display:flex;align-items:center;justify-content:center}
   .hist-emoji:hover{opacity:1}
   .filtro-ativo{font-size:11px;color:var(--accent);letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
   .btn-limpar-filtro{background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:Georgia,serif}
@@ -84,12 +85,27 @@
   .hist-item{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;display:flex;align-items:stretch;position:relative;overflow:hidden;transition:background .15s,border-color .15s}
   .hist-item.drag-over{border-color:var(--accent);border-style:dashed}
   .hist-item.dragging{opacity:.4}
-  .hist-body{flex:1;display:flex;align-items:center;justify-content:space-between;padding:13px 0 13px 14px;gap:10px;cursor:pointer;user-select:none;-webkit-user-select:none}
-  .hist-nome{font-size:15px;color:var(--text);flex:1}
+  .hist-body{flex:1;display:flex;align-items:center;justify-content:space-between;padding:9px 0 9px 3px;gap:6px;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .hist-nome{font-size:13px;color:var(--text);flex:1}
   .hist-medidas{font-size:15px;color:var(--accent);white-space:nowrap;min-width:90px;text-align:right}
   /* touch-action APENAS no handle para não bloquear scroll */
   .hist-handle{width:24px;display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--border2);font-size:11px;border-left:1px solid var(--border);flex-shrink:0;touch-action:none;user-select:none;-webkit-user-select:none;padding:0 2px}
   .hist-handle:active{cursor:grabbing;color:var(--accent)}
+
+  /* LEMBRETE */
+  #lembreteOverlay{position:fixed;inset:0;z-index:299;display:none;background:#00000066}
+  #lembreteOverlay.show{display:block}
+  #lembretePanel{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:12px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease;max-height:80vh;overflow-y:auto}
+  #lembretePanel.show{display:flex;transform:translateY(0)}
+  #lembreteNomeLabel{font-size:13px;color:var(--accent);font-weight:bold;text-align:center;letter-spacing:1px}
+  .lembrete-item{display:flex;align-items:flex-start;gap:10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid var(--border2);border-radius:10px;padding:10px 12px}
+  .lembrete-item-txt{flex:1;font-size:14px;color:var(--text);line-height:1.4}
+  .lembrete-item-del{background:transparent;border:none;color:#e05050;font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1}
+  .lembrete-vazio{font-size:13px;color:var(--text2);text-align:center;padding:8px 0}
+  #lembreteTexto{background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;resize:none;min-height:70px;width:100%}
+  #lembreteTexto:focus{border-color:var(--accent)}
+  .btn-add-lembrete{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1610;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
+  .btn-fechar-lembrete{background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:12px;font-size:14px;cursor:pointer;font-family:Georgia,serif}
 
   /* MENU EXCLUIR */
   #deleteMenu{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:10px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease}
@@ -205,6 +221,19 @@
   <div class="tema-opt" id="t-claro" onclick="setTema('theme-claro')"><div class="tema-dot" style="background:#e8dfc8;border:2px solid #8b5e2a"></div>Claro</div>
   <div class="tema-opt" id="t-floresta" onclick="setTema('theme-floresta')"><div class="tema-dot" style="background:#4eb86a;border:2px solid #2a8a48"></div>Floresta</div>
   <div class="tema-opt" id="t-noturno" onclick="setTema('theme-noturno')"><div class="tema-dot" style="background:#6e8ac8;border:2px solid #4a66a8"></div>Noturno</div>
+</div>
+
+<!-- PAINEL LEMBRETE -->
+<div id="lembreteOverlay" onclick="fecharLembrete()"></div>
+<div id="lembretePanel">
+  <div id="lembreteNomeLabel">🔔 LEMBRETES</div>
+  <div id="lembreteList"></div>
+  <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
+    <label style="font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase">Novo lembrete</label>
+    <textarea id="lembreteTexto" placeholder="Ex: Carregar 50 portas mista H na segunda-feira…"></textarea>
+    <button class="btn-add-lembrete" onclick="adicionarLembrete()">＋ Adicionar</button>
+  </div>
+  <button class="btn-fechar-lembrete" onclick="fecharLembrete()">Fechar</button>
 </div>
 
 <!-- MENU EXCLUIR (bottom sheet) -->
@@ -345,7 +374,7 @@
 <script>
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno'};
-let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null;
+let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
 
 // Scroll header
 let lastScroll=0;
@@ -371,10 +400,11 @@ function setTema(tema){
 }
 setTema(localStorage.getItem("tema")||'');
 
-function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items))}
+function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes))}
 function carregarDados(){
   try{marceneiros=JSON.parse(localStorage.getItem("marceneiros"))||defaultM()}catch{marceneiros=defaultM()}
   try{items=JSON.parse(localStorage.getItem("items"))||[]}catch{items=[]}
+  try{lembretes=JSON.parse(localStorage.getItem("lembretes"))||{}}catch{lembretes={}}
 }
 function defaultM(){return[{id:1,nome:"Carlos Silva"},{id:2,nome:"João Pereira"},{id:3,nome:"Marcos Oliveira"}]}
 
@@ -421,10 +451,13 @@ function renderHome(){
     const j=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="janela").reduce((s,i)=>s+Number(i.qtd),0);
     const div=document.createElement("div");div.className="marc-card";
     div.style.cssText=`background:linear-gradient(135deg,${light}18 0%,${dark}0a 100%);border-color:${light}44`;
+    const mLembretes = lembretes[m.id] || [];
+    const lemCount = mLembretes.length;
     div.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="marc-nome" style="margin:0;flex:1">${m.nome}</div>
         <div style="display:flex;gap:8px">
+          <button class="btn-lembrete-marc" style="background:${lemCount?'color-mix(in srgb,var(--accent) 18%,transparent)':'transparent'};border:1px solid ${lemCount?'var(--accent)':'var(--border2)'};color:${lemCount?'var(--accent)':'var(--text2)'};border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px">${lemCount?`🔔 <span style="font-size:12px;font-weight:900">${lemCount}</span>`:'🔕'}</button>
           <button class="btn-edit-marc" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:all .2s;white-space:nowrap">✏️</button>
           <button class="btn-del-marc" style="background:transparent;border:1px solid #e0505033;color:#e05050;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:all .2s;white-space:nowrap">🗑</button>
         </div>
@@ -434,6 +467,9 @@ function renderHome(){
         <span style="color:var(--border2)">·</span>
         <div class="marc-stat">🪟 <strong>${j}</strong> janela${j!==1?"s":""}</div>
       </div>`;
+
+    const btnLembrete = div.querySelector(".btn-lembrete-marc");
+    btnLembrete.addEventListener("click", e => { e.stopPropagation(); abrirLembrete(mId, mNome); });
 
     let editReady=false, delReady=false, editTimer=null, delTimer=null;
     const btnEdit = div.querySelector(".btn-edit-marc");
@@ -493,30 +529,39 @@ function removeMarceneiro(id){
 }
 
 // HISTÓRICO
-let filtroCategoria = null;
-function selecionarMarceneiro(id){selectedId=id;filtroCategoria=null;renderHistorico();irView("tipo")}
+let filtroCategoria = null, filtroBusca = "";
+function selecionarMarceneiro(id){selectedId=id;filtroCategoria=null;filtroBusca="";renderHistorico();irView("tipo")}
 function renderHistorico(){
   const m=getMarceneiro();const div=document.getElementById("historico");
   const todos=items.filter(i=>i.marceneiroId===m.id);
-  const itens=filtroCategoria?todos.filter(i=>i.categoria===filtroCategoria):todos;
+  let itens=filtroCategoria?todos.filter(i=>i.categoria===filtroCategoria):todos;
+  if(filtroBusca) itens=itens.filter(i=>(i.tipo||"").toLowerCase().includes(filtroBusca.toLowerCase()));
   if(!todos.length){div.innerHTML=`<p style="color:var(--text2);font-size:14px;margin-top:30px;text-align:center">Nenhum lançamento.<br>Use o botão + para adicionar.</p>`;return}
   const totalQtd=itens.reduce((s,i)=>s+Number(i.qtd),0);
   const filtroInfo=filtroCategoria?`<span style="font-size:11px;color:var(--accent);margin-left:8px;cursor:pointer" onclick="filtroCategoria=null;renderHistorico()">${filtroCategoria==="porta"?"🚪":"🪟"} ✕</span>`:"";
   div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
     <div class="hist-title" style="margin:0">Lançamentos${filtroInfo}</div>
     <div style="display:flex;align-items:center;gap:6px;padding-right:28px"><span style="font-size:11px;color:var(--text2);letter-spacing:1px">TOTAL</span><span style="font-size:22px;font-weight:900;color:var(--accent)">${totalQtd}</span><span style="font-size:12px;color:var(--text2)">un</span></div>
-  </div><div class="hist-list" id="histList"></div>`;
+  </div>
+  <div style="position:relative;margin-bottom:12px">
+    <input id="inputBusca" value="${filtroBusca}" placeholder="🔍  Buscar por nome…" oninput="filtroBusca=this.value;renderHistorico()" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:10px;padding:10px 36px 10px 14px;color:var(--text);font-size:14px;font-family:Georgia,serif;outline:none"/>
+    ${filtroBusca?`<span onclick="filtroBusca='';renderHistorico()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text2);font-size:16px">✕</span>`:""}
+  </div>
+  <div class="hist-list" id="histList"></div>`;
   const list=document.getElementById("histList");
-  itens.forEach(item=>buildHistItem(item,list));
+  if(itens.length===0){list.innerHTML=`<p style="color:var(--text2);font-size:14px;margin-top:20px;text-align:center">Nenhum resultado para "${filtroBusca}".</p>`;}
+  else itens.forEach(item=>buildHistItem(item,list));
+  const inp=document.getElementById("inputBusca");
+  if(inp&&filtroBusca){inp.focus();const l=inp.value.length;inp.setSelectionRange(l,l);}
 }
 
 // DOUBLE TAP
 function buildHistItem(item,list){
   const nome=item.tipo||(item.categoria==="porta"?"Porta":"Janela");
-  const medidas=`<span style="font-size:20px;font-weight:900;letter-spacing:-0.5px">${item.qtd}</span><span style="font-size:15px;font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:20px;font-weight:900;letter-spacing:-0.5px">${item.largura}</span><span style="font-size:12px;font-weight:400">cm</span>`;
+  const medidas=`<span style="font-size:16px;font-weight:900;letter-spacing:-0.5px">${item.qtd}</span><span style="font-size:12px;font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:16px;font-weight:900;letter-spacing:-0.5px">${item.largura}</span><span style="font-size:10px;font-weight:400">cm</span>`;
   const el=document.createElement("div");el.className="hist-item";el.dataset.id=item.id;
   const emoji = item.categoria === "porta" ? "🚪" : "🪟";
-  el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><span class="hist-nome">${nome}</span><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu(${item.id})" style="cursor:pointer;padding:4px 8px;border-radius:8px;border:1px solid var(--border2)">${medidas}</span></div><div class="hist-handle">⋮⋮</div>`;
+  el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap"><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu(${item.id})" style="cursor:pointer;flex-shrink:0">${medidas}</span><span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${nome}</span></div></div><div class="hist-handle">⋮⋮</div>`;
   // Filtro ao clicar no emoji
   el.querySelector(".hist-emoji").addEventListener("click", e => {
     e.stopPropagation();
@@ -1029,9 +1074,9 @@ function exportarPDF() {
   doc.setTextColor(130, 100, 50);
   doc.text("TOTAL", margin + 6, 42);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setTextColor(80, 55, 15);
-  doc.text(totalQtd + "un", margin + contentW - 4, 42, { align: "right" });
+  doc.text(totalQtd + " un", margin + 24, 42);
 
   doc.setDrawColor(200, 180, 130);
   doc.setLineWidth(0.2);
@@ -1047,21 +1092,24 @@ function exportarPDF() {
     }
 
     doc.setFillColor(idx % 2 === 0 ? 252 : 245, idx % 2 === 0 ? 250 : 248, idx % 2 === 0 ? 244 : 238);
-    doc.roundedRect(margin, y - 5, contentW, 12, 2, 2, "F");
+    doc.roundedRect(margin, y - 5, contentW, 14, 2, 2, "F");
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(50, 35, 10);
     const nome = item.tipo || (item.categoria === "porta" ? "Porta" : "Janela");
-    doc.text(nome, margin + 6, y + 2);
+    const numCol = 42; // largura fixa da coluna de números
 
-    // Qtd | largura
+    // Números alinhados à direita dentro da coluna
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(13);
     doc.setTextColor(100, 70, 20);
-    doc.text(`${item.qtd}  |  ${item.largura}cm`, margin + contentW - 4, y + 2, { align: "right" });
+    doc.text(`${item.qtd} | ${item.largura}cm`, margin + numCol, y + 2, { align: "right" });
 
-    y += 13;
+    // Nome logo após a coluna
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(13);
+    doc.setTextColor(50, 35, 10);
+    doc.text(nome, margin + numCol + 5, y + 2);
+
+    y += 15;
   });
 
   // Rodapé
@@ -1109,6 +1157,45 @@ function abrirDeleteMarceneiro(id, nome) {
 // Listener modalMarcOverlay
 const _mmo = document.getElementById("modalMarcOverlay");
 if (_mmo) _mmo.addEventListener("click", e => { if(e.target===_mmo) fecharModalMarc(); });
+
+// LEMBRETES
+let lembreteIdAtual = null;
+function abrirLembrete(id, nome) {
+  lembreteIdAtual = id;
+  document.getElementById("lembreteNomeLabel").textContent = "🔔 " + nome;
+  document.getElementById("lembreteTexto").value = "";
+  renderLembreteList();
+  document.getElementById("lembreteOverlay").classList.add("show");
+  document.getElementById("lembretePanel").classList.add("show");
+}
+function renderLembreteList() {
+  const lista = lembretes[lembreteIdAtual] || [];
+  const div = document.getElementById("lembreteList");
+  if (!lista.length) { div.innerHTML = `<div class="lembrete-vazio">Nenhum lembrete ainda.</div>`; return; }
+  div.innerHTML = lista.map((l,i) => `
+    <div class="lembrete-item">
+      <span class="lembrete-item-txt">${l.txt}</span>
+      <button class="lembrete-item-del" onclick="deletarLembrete(${i})">✕</button>
+    </div>`).join('');
+}
+function adicionarLembrete() {
+  const txt = document.getElementById("lembreteTexto").value.trim();
+  if (!txt) return;
+  if (!lembretes[lembreteIdAtual]) lembretes[lembreteIdAtual] = [];
+  lembretes[lembreteIdAtual].push({ txt });
+  document.getElementById("lembreteTexto").value = "";
+  salvarDados(); renderLembreteList(); renderHome();
+}
+function deletarLembrete(idx) {
+  lembretes[lembreteIdAtual].splice(idx, 1);
+  if (!lembretes[lembreteIdAtual].length) delete lembretes[lembreteIdAtual];
+  salvarDados(); renderLembreteList(); renderHome();
+}
+function fecharLembrete() {
+  lembreteIdAtual = null;
+  document.getElementById("lembreteOverlay").classList.remove("show");
+  document.getElementById("lembretePanel").classList.remove("show");
+}
 
 carregarDados();carregarSaidas();renderHome();
 </script>
