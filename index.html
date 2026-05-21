@@ -201,15 +201,123 @@
   ::-webkit-scrollbar{width:5px}
   ::-webkit-scrollbar-track{background:var(--bg)}
   ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+  /* === NUVEM / SETUP / QR === */
+  #setupOverlay{position:fixed;inset:0;z-index:500;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  #setupOverlay.show{display:flex}
+  .setup-card{background:var(--card-bg);border:1px solid var(--border2);border-radius:20px;padding:28px 22px;max-width:420px;width:100%;text-align:center}
+  .setup-title{font-size:22px;color:var(--accent);margin-bottom:6px;font-weight:bold}
+  .setup-sub{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.4}
+  .setup-btn{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1610;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;margin-bottom:10px}
+  .setup-btn.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .setup-btn.tertiary{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+  .setup-divider{font-size:11px;color:var(--text2);text-align:center;margin:14px 0;letter-spacing:2px;text-transform:uppercase}
+  .setup-info{font-size:12px;color:var(--text2);margin-top:18px;line-height:1.5;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)}
+
+  /* QR display */
+  #qrOverlay{position:fixed;inset:0;z-index:500;background:#000000aa;display:none;align-items:center;justify-content:center;padding:20px}
+  #qrOverlay.show{display:flex}
+  .qr-card{background:var(--card-bg);border:1px solid var(--border2);border-radius:20px;padding:26px 22px;max-width:380px;width:100%;text-align:center}
+  .qr-title{font-size:18px;color:var(--accent);margin-bottom:6px;font-weight:bold}
+  .qr-sub{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.4}
+  #qrcodeBox{background:#fff;padding:14px;border-radius:12px;display:inline-block;margin-bottom:18px}
+  #qrcodeBox img,#qrcodeBox canvas{display:block}
+  .qr-code-text{font-size:11px;color:var(--text2);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase}
+  .qr-code-val{font-size:22px;color:var(--accent);font-weight:bold;letter-spacing:3px;font-family:'Courier New',monospace;margin-bottom:16px;user-select:all;-webkit-user-select:all;cursor:pointer;padding:8px;border-radius:8px;border:1px dashed var(--border2)}
+  .qr-code-val:hover{background:var(--bg3)}
+  .qr-btn-row{display:flex;gap:10px}
+  .qr-btn{flex:1;border-radius:10px;padding:13px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;border:none}
+  .qr-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1610}
+  .qr-btn.secondary{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+
+  /* Scanner */
+  #scannerOverlay{position:fixed;inset:0;z-index:500;background:#000000ee;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+  #scannerOverlay.show{display:flex}
+  .scanner-card{background:var(--card-bg);border:1px solid var(--border2);border-radius:20px;padding:22px;max-width:420px;width:100%}
+  .scanner-title{font-size:17px;color:var(--accent);margin-bottom:6px;font-weight:bold;text-align:center}
+  .scanner-sub{font-size:13px;color:var(--text2);margin-bottom:16px;text-align:center}
+  #reader{width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:240px}
+  #reader video{width:100%!important;border-radius:12px}
+  .scanner-manual{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .scanner-manual-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;text-align:center}
+  #codigoInput{width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:10px;padding:13px;color:var(--text);font-size:18px;font-family:'Courier New',monospace;text-align:center;letter-spacing:3px;text-transform:uppercase;outline:none;margin-bottom:10px}
+  #codigoInput:focus{border-color:var(--accent)}
+  .scanner-btns{display:flex;gap:8px;margin-top:10px}
+  .scanner-btn{flex:1;border-radius:10px;padding:12px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;border:none}
+  .scanner-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1610}
+  .scanner-btn.secondary{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+  .scanner-err{font-size:12px;color:var(--danger);text-align:center;margin-top:8px;min-height:18px}
+
+  /* Indicador de sincronização */
+  #syncDot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#666;transition:background .3s}
+  #syncDot.online{background:#4eb86a;box-shadow:0 0 6px #4eb86a99}
+  #syncDot.syncing{background:#e0b050;animation:pulse 1s infinite}
+  #syncDot.offline{background:#888}
+  #syncDot.error{background:var(--danger)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
+<!-- ============ TELA DE SETUP INICIAL ============ -->
+<div id="setupOverlay">
+  <div class="setup-card">
+    <div class="setup-title">🪵 Estoque JL</div>
+    <div class="setup-sub">Bem-vindo! Para começar, escolha uma das opções:</div>
+
+    <button class="setup-btn" onclick="setupCriarEstoque()">➕ Criar novo estoque</button>
+    <button class="setup-btn secondary" onclick="setupConectar()">📷 Conectar a estoque existente</button>
+
+    <div id="setupMigrarBox" style="display:none">
+      <div class="setup-divider">— OU —</div>
+      <button class="setup-btn tertiary" onclick="setupMigrarLocal()">📦 Usar os dados deste celular</button>
+      <div class="setup-info">Você já tem estoque salvo neste aparelho. Esta opção cria um estoque novo na nuvem usando esses dados como ponto de partida.</div>
+    </div>
+
+    <div class="setup-info" id="setupHelpInfo">
+      Seus dados ficam salvos na nuvem (Firebase) e podem ser compartilhados com seu irmão via QR Code. Funciona offline e sincroniza automaticamente.
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL QR CODE (após criar/conectar) ============ -->
+<div id="qrOverlay">
+  <div class="qr-card">
+    <div class="qr-title" id="qrTitle">Estoque criado! 🎉</div>
+    <div class="qr-sub" id="qrSub">Peça para seu irmão escanear este QR Code para conectar:</div>
+    <div id="qrcodeBox"></div>
+    <div class="qr-code-text">Ou compartilhe o código</div>
+    <div class="qr-code-val" id="qrCodeVal" onclick="copiarCodigo()">----</div>
+    <div class="qr-btn-row">
+      <button class="qr-btn secondary" onclick="copiarCodigo()">📋 Copiar</button>
+      <button class="qr-btn primary" onclick="fecharQR()">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL SCANNER QR ============ -->
+<div id="scannerOverlay">
+  <div class="scanner-card">
+    <div class="scanner-title">📷 Escanear QR Code</div>
+    <div class="scanner-sub">Aponte a câmera para o QR Code do estoque</div>
+    <div id="reader"></div>
+    <div class="scanner-err" id="scannerErr"></div>
+    <div class="scanner-manual">
+      <div class="scanner-manual-label">Ou digite o código manualmente</div>
+      <input id="codigoInput" placeholder="XXXX-XXXX" maxlength="9" oninput="formatCodigo(this)" />
+      <div class="scanner-btns">
+        <button class="scanner-btn secondary" onclick="fecharScanner()">Cancelar</button>
+        <button class="scanner-btn primary" onclick="conectarComCodigo()">Conectar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <header id="mainHeader">
   <div class="header-inner">
     <button id="btnVoltar" onclick="voltar()">&#8249; Voltar</button>
-    <div id="headerName" class="header-name">Estoque JL</div>
+    <div id="headerName" class="header-name"><span id="syncDot" class="offline" title="Status de sincronização"></span>Estoque JL</div>
     <button id="btnTema" onclick="toggleTemaPanel(event)">🎨</button>
     <button id="btnSaidas" onclick="abrirSaidas()" title="Ver Saídas" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📤</button>
     <button id="btnPDF" onclick="exportarPDF()" title="Exportar PDF" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📄</button>
@@ -221,6 +329,9 @@
   <div class="tema-opt" id="t-claro" onclick="setTema('theme-claro')"><div class="tema-dot" style="background:#e8dfc8;border:2px solid #8b5e2a"></div>Claro</div>
   <div class="tema-opt" id="t-floresta" onclick="setTema('theme-floresta')"><div class="tema-dot" style="background:#4eb86a;border:2px solid #2a8a48"></div>Floresta</div>
   <div class="tema-opt" id="t-noturno" onclick="setTema('theme-noturno')"><div class="tema-dot" style="background:#6e8ac8;border:2px solid #4a66a8"></div>Noturno</div>
+  <div style="height:1px;background:var(--border);margin:4px 0"></div>
+  <div class="tema-opt" onclick="verQRAtual();fecharTemaPanel()"><div class="tema-dot" style="background:transparent;border:0;display:flex;align-items:center;justify-content:center">📷</div>Compartilhar (QR)</div>
+  <div class="tema-opt" onclick="trocarEstoque()"><div class="tema-dot" style="background:transparent;border:0;display:flex;align-items:center;justify-content:center">🔄</div>Trocar estoque</div>
 </div>
 
 <!-- PAINEL LEMBRETE -->
@@ -371,6 +482,38 @@
   </div>
 </main>
 
+<!-- ============ BIBLIOTECAS NUVEM + QR ============ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<!-- Firebase (módulo) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp,
+    enableIndexedDbPersistence
+  } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDyHlxe_9ffMZGHvHN4vhIIDK4Ct_WSEo0",
+    authDomain: "estoque-portas.firebaseapp.com",
+    projectId: "estoque-portas",
+    storageBucket: "estoque-portas.firebasestorage.app",
+    messagingSenderId: "930688515113",
+    appId: "1:930688515113:web:1588613d1b092849caf038"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+
+  // Persistência offline (cache local automático)
+  try { enableIndexedDbPersistence(db); } catch(e) { /* ignore */ }
+
+  // Expor para o código principal
+  window.fb = { db, doc, setDoc, getDoc, onSnapshot, serverTimestamp };
+  window.dispatchEvent(new Event("fb-ready"));
+</script>
+
 <script>
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno'};
@@ -400,7 +543,7 @@ function setTema(tema){
 }
 setTema(localStorage.getItem("tema")||'');
 
-function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes))}
+function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));cloudPush()}
 function carregarDados(){
   try{marceneiros=JSON.parse(localStorage.getItem("marceneiros"))||defaultM()}catch{marceneiros=defaultM()}
   try{items=JSON.parse(localStorage.getItem("items"))||[]}catch{items=[]}
@@ -780,7 +923,7 @@ let saidas = [];
 function carregarSaidas() {
   try { saidas = JSON.parse(localStorage.getItem("saidas")) || []; } catch { saidas = []; }
 }
-function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas)); }
+function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush() }
 
 function registrarSaida(marceneiroId, nome, largura, qtd) {
   saidas.push({
@@ -1197,7 +1340,222 @@ function fecharLembrete() {
   document.getElementById("lembretePanel").classList.remove("show");
 }
 
-carregarDados();carregarSaidas();renderHome();
+// ===========================================================
+// ============ NUVEM (FIREBASE) + QR CODE + SETUP ===========
+// ===========================================================
+
+let workspaceId = localStorage.getItem("workspaceId") || null;
+let cloudUnsub = null;
+let cloudReady = false;
+let cloudApplyingRemote = false;     // evita loop quando aplicamos dados vindos do snapshot
+let cloudPushTimer = null;
+let qrScanner = null;
+
+function setSyncStatus(state){
+  const dot = document.getElementById("syncDot"); if (!dot) return;
+  dot.className = state;
+  const titles = {online:"Sincronizado",syncing:"Sincronizando...",offline:"Offline (salvo localmente)",error:"Erro na sincronização"};
+  dot.title = titles[state] || "";
+}
+
+function gerarCodigoWorkspace(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem caracteres ambíguos
+  let s = ""; for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s.slice(0,4) + "-" + s.slice(4,8);
+}
+
+// Empurra dados locais pra nuvem (com debounce)
+function cloudPush(){
+  if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
+  setSyncStatus("syncing");
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(async () => {
+    try {
+      const { db, doc, setDoc, serverTimestamp } = window.fb;
+      await setDoc(doc(db, "estoques", workspaceId), {
+        marceneiros, items, lembretes, saidas,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setSyncStatus("online");
+    } catch (e) {
+      console.error("Erro ao salvar na nuvem:", e);
+      setSyncStatus("error");
+    }
+  }, 400);
+}
+
+// Assina mudanças vindas da nuvem
+function cloudSubscribe(){
+  if (!workspaceId || !window.fb) return;
+  const { db, doc, onSnapshot } = window.fb;
+  if (cloudUnsub) cloudUnsub();
+  setSyncStatus("syncing");
+  cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
+    if (!snap.exists()) { setSyncStatus("online"); return; }
+    const data = snap.data();
+    cloudApplyingRemote = true;
+    if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
+    if (Array.isArray(data.items))       items       = data.items;
+    if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
+    if (Array.isArray(data.saidas))      saidas      = data.saidas;
+    // cache local
+    localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
+    localStorage.setItem("items",       JSON.stringify(items));
+    localStorage.setItem("lembretes",   JSON.stringify(lembretes));
+    localStorage.setItem("saidas",      JSON.stringify(saidas));
+    cloudApplyingRemote = false;
+    setSyncStatus("online");
+    // re-render do que estiver visível
+    try { if (viewAtual === "home") renderHome(); else if (viewAtual === "historico") renderHistorico(); } catch(e){}
+  }, (err) => {
+    console.error("Erro snapshot:", err); setSyncStatus("error");
+  });
+}
+
+// ============ TELA DE SETUP ============
+function mostrarSetup(){
+  carregarDados(); carregarSaidas(); // carrega cache local pra detectar dados existentes
+  const temDadosLocais = (items && items.length > 0) || (saidas && saidas.length > 0) || (lembretes && Object.keys(lembretes).length > 0);
+  document.getElementById("setupMigrarBox").style.display = temDadosLocais ? "block" : "none";
+  document.getElementById("setupOverlay").classList.add("show");
+}
+function fecharSetup(){ document.getElementById("setupOverlay").classList.remove("show"); }
+
+async function setupCriarEstoque(){
+  // cria estoque vazio
+  await criarWorkspace({ marceneiros: [{id:1,nome:"Carlos Silva"},{id:2,nome:"João Pereira"},{id:3,nome:"Marcos Oliveira"}], items: [], lembretes: {}, saidas: [] });
+}
+
+async function setupMigrarLocal(){
+  // cria estoque usando dados locais existentes
+  await criarWorkspace({ marceneiros, items, lembretes, saidas });
+}
+
+async function criarWorkspace(estadoInicial){
+  if (!window.fb){ alert("Aguarde, conexão com a nuvem ainda carregando..."); return; }
+  const codigo = gerarCodigoWorkspace();
+  try {
+    const { db, doc, setDoc, serverTimestamp } = window.fb;
+    await setDoc(doc(db, "estoques", codigo), { ...estadoInicial, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    workspaceId = codigo;
+    localStorage.setItem("workspaceId", codigo);
+    cloudReady = true;
+    // aplica estado inicial localmente
+    marceneiros = estadoInicial.marceneiros; items = estadoInicial.items;
+    lembretes = estadoInicial.lembretes;     saidas = estadoInicial.saidas;
+    localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
+    localStorage.setItem("items",       JSON.stringify(items));
+    localStorage.setItem("lembretes",   JSON.stringify(lembretes));
+    localStorage.setItem("saidas",      JSON.stringify(saidas));
+    fecharSetup();
+    abrirQRCode(codigo, true);
+    cloudSubscribe();
+    renderHome();
+  } catch(e){ console.error(e); alert("Erro ao criar estoque: " + e.message); }
+}
+
+function setupConectar(){ abrirScanner(); }
+
+// ============ MODAL QR CODE ============
+function abrirQRCode(codigo, primeiraVez){
+  document.getElementById("qrTitle").textContent = primeiraVez ? "Estoque criado! 🎉" : "Compartilhar estoque";
+  document.getElementById("qrSub").textContent = primeiraVez
+    ? "Peça para seu irmão escanear este QR Code (ou digitar o código) para conectar:"
+    : "Escaneie este QR Code em outro celular para conectar ao mesmo estoque:";
+  document.getElementById("qrCodeVal").textContent = codigo;
+  const box = document.getElementById("qrcodeBox"); box.innerHTML = "";
+  new QRCode(box, { text: codigo, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  document.getElementById("qrOverlay").classList.add("show");
+}
+function fecharQR(){ document.getElementById("qrOverlay").classList.remove("show"); }
+function copiarCodigo(){
+  const cod = document.getElementById("qrCodeVal").textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(cod).then(()=>{
+    const el = document.getElementById("qrCodeVal"); const old = el.textContent;
+    el.textContent = "✓ COPIADO"; setTimeout(()=>el.textContent = old, 1200);
+  });
+}
+
+// ============ SCANNER QR ============
+function abrirScanner(){
+  document.getElementById("scannerErr").textContent = "";
+  document.getElementById("codigoInput").value = "";
+  document.getElementById("scannerOverlay").classList.add("show");
+  // iniciar câmera
+  setTimeout(() => {
+    try {
+      qrScanner = new Html5Qrcode("reader");
+      qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 220, height: 220 } },
+        (decodedText) => { pararScanner(); conectarAEstoque(decodedText.trim().toUpperCase()); },
+        () => {}
+      ).catch(err => {
+        document.getElementById("scannerErr").textContent = "Câmera indisponível — digite o código abaixo.";
+      });
+    } catch(e){ document.getElementById("scannerErr").textContent = "Câmera indisponível — digite o código abaixo."; }
+  }, 100);
+}
+function pararScanner(){
+  if (qrScanner) { try { qrScanner.stop().catch(()=>{}); qrScanner.clear(); } catch(e){} qrScanner = null; }
+}
+function fecharScanner(){ pararScanner(); document.getElementById("scannerOverlay").classList.remove("show"); }
+function formatCodigo(inp){
+  let v = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (v.length > 4) v = v.slice(0,4) + "-" + v.slice(4,8);
+  inp.value = v;
+}
+function conectarComCodigo(){
+  const cod = document.getElementById("codigoInput").value.trim().toUpperCase();
+  if (cod.length < 9) { document.getElementById("scannerErr").textContent = "Código incompleto (formato XXXX-XXXX)"; return; }
+  pararScanner(); conectarAEstoque(cod);
+}
+async function conectarAEstoque(codigo){
+  if (!window.fb){ alert("Aguarde, conexão ainda carregando..."); return; }
+  try {
+    const { db, doc, getDoc } = window.fb;
+    const snap = await getDoc(doc(db, "estoques", codigo));
+    if (!snap.exists()){
+      document.getElementById("scannerErr").textContent = "Código inválido — estoque não encontrado.";
+      document.getElementById("scannerOverlay").classList.add("show");
+      return;
+    }
+    workspaceId = codigo;
+    localStorage.setItem("workspaceId", codigo);
+    cloudReady = true;
+    fecharScanner(); fecharSetup();
+    cloudSubscribe();
+  } catch(e){ console.error(e); document.getElementById("scannerErr").textContent = "Erro: " + e.message; }
+}
+
+// ============ TROCAR / VER ESTOQUE (acessível pelo painel de tema) ============
+function verQRAtual(){ if (workspaceId) abrirQRCode(workspaceId, false); }
+function trocarEstoque(){
+  if (!confirm("Desconectar deste estoque? Os dados continuam na nuvem; você poderá voltar com o mesmo código.")) return;
+  if (cloudUnsub) cloudUnsub();
+  localStorage.removeItem("workspaceId");
+  workspaceId = null; cloudReady = false;
+  location.reload();
+}
+
+// ============ INICIALIZAÇÃO ============
+window.addEventListener("fb-ready", () => {
+  if (workspaceId){
+    cloudReady = true;
+    // carrega cache local primeiro (render instantâneo), depois assina nuvem
+    carregarDados(); carregarSaidas(); renderHome();
+    cloudSubscribe();
+  } else {
+    mostrarSetup();
+  }
+});
+
+// Fallback: se o Firebase não estiver disponível, abre o app no modo local
+setTimeout(() => {
+  if (!window.fb){
+    if (workspaceId){ carregarDados(); carregarSaidas(); renderHome(); setSyncStatus("offline"); }
+    else { mostrarSetup(); }
+  }
+}, 3000);
+
 </script>
 </body>
 </html>
