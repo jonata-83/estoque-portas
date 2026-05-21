@@ -255,6 +255,18 @@
   #syncDot.offline{background:#888}
   #syncDot.error{background:var(--danger)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* === DEVOLVER PORTAS === */
+  #devolverOverlay.show{display:block!important}
+  #devolverPanel.show{display:flex!important;transform:translateY(0)!important}
+  #devolverQtd:focus{border-color:var(--accent)!important}
+
+  /* === SUBTOTAL POR ESPÉCIE (saídas) === */
+  .saida-subtotal{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:6px 12px 10px 12px;margin:2px 0 8px;border-bottom:1px dashed var(--border2)}
+  .saida-subtotal .st-label{font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+  .saida-subtotal .st-nome{font-size:12px;color:var(--text2);letter-spacing:.5px;flex:1;text-align:left;font-style:italic}
+  .saida-subtotal .st-val{font-size:18px;font-weight:900;color:var(--accent)}
+  .saida-subtotal .st-un{font-size:11px;color:var(--text2)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -354,6 +366,22 @@
   <div class="delete-nome" id="deleteNome"></div>
   <button class="btn-excluir" onclick="confirmarDelete()">Excluir</button>
   <button class="btn-cancelar-del" onclick="fecharDeleteMenu()">Voltar</button>
+</div>
+
+<!-- DEVOLVER PORTAS AO ESTOQUE (bottom sheet) -->
+<div id="devolverOverlay" onclick="fecharDevolver()" style="position:fixed;inset:0;z-index:399;display:none;background:#00000066"></div>
+<div id="devolverPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:400;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:22px 16px 32px;display:none;flex-direction:column;gap:14px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease">
+  <div style="text-align:center">
+    <div style="font-size:11px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase">Devolver ao estoque</div>
+    <div id="devolverNome" style="font-size:17px;color:var(--text);font-weight:bold;margin-top:8px"></div>
+    <div id="devolverDisponivel" style="font-size:13px;color:var(--text2);margin-top:6px"></div>
+  </div>
+  <input type="number" id="devolverQtd" inputmode="numeric" placeholder="Quantas devolver?" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:16px;color:var(--text);font-size:22px;font-family:Georgia,serif;outline:none;text-align:center;font-weight:bold" oninput="this.style.borderColor='var(--border2)'" />
+  <div id="devolverFeedback" style="font-size:13px;text-align:center;min-height:18px;color:var(--danger);font-weight:bold"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button onclick="fecharDevolver()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="confirmarDevolver()" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">↩ Devolver</button>
+  </div>
 </div>
 
 <!-- PAINEL SAÍDAS -->
@@ -925,10 +953,10 @@ function carregarSaidas() {
 }
 function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush() }
 
-function registrarSaida(marceneiroId, nome, largura, qtd) {
+function registrarSaida(marceneiroId, nome, largura, qtd, categoria) {
   saidas.push({
     id: Date.now(), marceneiroId,
-    nome, largura, qtd,
+    nome, largura, qtd, categoria: categoria || "porta",
     data: new Date().toLocaleDateString("pt-BR"),
     hora: new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"})
   });
@@ -971,13 +999,34 @@ function renderSaidas() {
   const agrupados = Object.values(grupos).reverse();
 
   list.innerHTML = "";
+  let lastSpeciesKey = null;
+  let speciesAcc = 0;
+  let speciesNome = "";
+
+  function appendSubtotal(){
+    if (speciesAcc <= 0) return;
+    const sub = document.createElement("div");
+    sub.className = "saida-subtotal";
+    sub.innerHTML = `<span class="st-nome">${speciesNome}</span><span class="st-label">Total</span><span class="st-val">${speciesAcc}</span><span class="st-un">un</span>`;
+    list.appendChild(sub);
+  }
+
   agrupados.forEach((s, idx) => {
+    const speciesKey = (s.nome || "").toLowerCase().trim();
+    if (lastSpeciesKey !== null && lastSpeciesKey !== speciesKey) {
+      appendSubtotal();
+      speciesAcc = 0;
+    }
+    speciesNome = s.nome;
+    lastSpeciesKey = speciesKey;
+    speciesAcc += Number(s.qtd);
+
     const div = document.createElement("div");
     div.className = "saida-item";
     div.style.cssText = "display:flex;align-items:center;overflow:hidden";
     div.dataset.sid = s.id;
     div.innerHTML = `
-      <div class="saida-top" style="flex:1;padding:12px 0 12px 0">
+      <div class="saida-top saida-tap" style="flex:1;padding:12px 0 12px 0">
         <div style="display:flex;align-items:center;gap:0;width:100%;flex-wrap:wrap">
           <span style="font-size:18px;font-weight:900;flex-shrink:0;min-width:52px;display:inline-block;text-align:right">${s.qtd}</span>
           <span style="font-size:13px;font-weight:300;color:var(--text2);margin:0 4px;flex-shrink:0">|</span>
@@ -989,15 +1038,97 @@ function renderSaidas() {
     const sh = div.querySelector(".saida-handle");
     sh.addEventListener("mousedown", e => startSaidaDrag(e, s.id, div));
     sh.addEventListener("touchstart", e => { e.preventDefault(); startSaidaDrag(e.touches[0], s.id, div); }, { passive: false });
+
+    // duplo-toque pra devolver portas ao estoque
+    const tapArea = div.querySelector(".saida-tap");
+    let lastTap = 0;
+    const handleTap = (e) => {
+      const now = Date.now();
+      if (now - lastTap < 400) { abrirDevolver(s); lastTap = 0; }
+      else { lastTap = now; }
+    };
+    tapArea.addEventListener("click", handleTap);
+
     list.appendChild(div);
   });
+  // Subtotal da última espécie
+  appendSubtotal();
 
-  // Total
+  // Total geral
   const totalSaidas = agrupados.reduce((a,s) => a + Number(s.qtd), 0);
   const totalDiv = document.createElement("div");
   totalDiv.style.cssText = "display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:10px 4px 4px;border-top:1px solid var(--border);margin-top:4px";
   totalDiv.innerHTML = `<span style="font-size:12px;color:var(--text2);letter-spacing:1px">TOTAL</span><span style="font-size:24px;font-weight:900;color:var(--accent)">${totalSaidas}</span><span style="font-size:13px;color:var(--text2)">un</span>`;
   list.appendChild(totalDiv);
+}
+
+// ============ DEVOLVER PORTAS AO ESTOQUE ============
+let devolverAtual = null;
+function abrirDevolver(saidaAgg){
+  devolverAtual = saidaAgg;
+  document.getElementById("devolverNome").textContent = `${saidaAgg.qtd} | ${saidaAgg.largura}cm  ${saidaAgg.nome}`;
+  document.getElementById("devolverDisponivel").textContent = `Disponível para devolver: ${saidaAgg.qtd} un`;
+  document.getElementById("devolverQtd").value = "";
+  document.getElementById("devolverFeedback").textContent = "";
+  document.getElementById("devolverOverlay").classList.add("show");
+  document.getElementById("devolverPanel").classList.add("show");
+  setTimeout(()=>document.getElementById("devolverQtd").focus(), 150);
+}
+function fecharDevolver(){
+  document.getElementById("devolverOverlay").classList.remove("show");
+  document.getElementById("devolverPanel").classList.remove("show");
+  devolverAtual = null;
+}
+function confirmarDevolver(){
+  if (!devolverAtual) return;
+  const inp = document.getElementById("devolverQtd");
+  const fb = document.getElementById("devolverFeedback");
+  const val = Number(inp.value);
+  if (!val || val <= 0){ fb.textContent = "Digite uma quantidade válida"; inp.style.borderColor = "var(--danger)"; return; }
+  if (val > devolverAtual.qtd){ fb.textContent = `Máximo permitido: ${devolverAtual.qtd}`; inp.style.borderColor = "var(--danger)"; return; }
+
+  // Decrementar saidas correspondentes (mais recentes primeiro)
+  const marcId = devolverAtual.marceneiroId;
+  const nome = devolverAtual.nome;
+  const largura = devolverAtual.largura;
+  let restante = val;
+  // Pega todos os matches e ordena por id desc (mais recente primeiro)
+  const indices = [];
+  saidas.forEach((s, i) => {
+    if (s.marceneiroId === marcId && s.nome === nome && s.largura === largura) indices.push(i);
+  });
+  indices.sort((a,b) => (saidas[b].id||0) - (saidas[a].id||0));
+  const idsRemover = [];
+  for (const i of indices){
+    if (restante <= 0) break;
+    const q = Number(saidas[i].qtd);
+    if (q <= restante){ restante -= q; idsRemover.push(saidas[i].id); }
+    else { saidas[i].qtd = q - restante; restante = 0; }
+  }
+  saidas = saidas.filter(s => !idsRemover.includes(s.id));
+
+  // Adicionar de volta ao estoque
+  const item = items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela")) && String(i.largura) === String(largura));
+  if (item){
+    item.qtd = Number(item.qtd) + val;
+  } else {
+    // Fallback: cria novo item no estoque (caso o original tenha sido deletado)
+    const cat = devolverAtual.categoria || (nome === "Janela" ? "janela" : "porta");
+    items.push({
+      id: Date.now(),
+      marceneiroId: marcId,
+      categoria: cat,
+      tipo: (nome === "Porta" || nome === "Janela") ? "" : nome,
+      largura: largura,
+      qtd: val,
+      data: new Date().toLocaleDateString("pt-BR")
+    });
+  }
+
+  salvarDados(); salvarSaidas();
+  fecharDevolver();
+  renderSaidas();
+  renderHome();
 }
 
 function limparSaidas() {
@@ -1163,7 +1294,7 @@ function aplicarMove(sinal) {
     document.getElementById("moveFeedback").textContent = `-${val} → Novo saldo: ${items[idx].qtd}`;
     // Registrar saída
     const nomeItem = items[idx].tipo || (items[idx].categoria === "porta" ? "Porta" : "Janela");
-    registrarSaida(items[idx].marceneiroId, nomeItem, items[idx].largura, val);
+    registrarSaida(items[idx].marceneiroId, nomeItem, items[idx].largura, val, items[idx].categoria);
   }
   document.getElementById("moveSaldo").textContent = "Saldo atual: " + items[idx].qtd;
   document.getElementById("moveQtd").value = "";
