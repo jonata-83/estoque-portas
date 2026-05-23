@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -116,7 +117,7 @@
     50%      { box-shadow: 0 0 14px 3px rgba(255,200,60,0.40), 0 0 0 4px rgba(255,200,60,0.00); }
   }
   .bell-aceso{ animation: bellPulse 1.8s ease-in-out infinite; filter: drop-shadow(0 0 2px rgba(255,200,60,0.30)); }
-  .btn-fechar-lembrete{background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:12px;font-size:14px;cursor:pointer;font-family:Georgia,serif}
+  .btn-fechar-lembrete{background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:12px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
 
   /* MENU EXCLUIR */
   #deleteMenu{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:10px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease}
@@ -124,7 +125,7 @@
   .delete-label{font-size:13px;color:var(--text2);text-align:center;margin-bottom:4px}
   .delete-nome{font-size:17px;color:var(--text);text-align:center;font-weight:bold;margin-bottom:8px}
   .btn-excluir{background:#e05050;color:#fff;border:none;border-radius:12px;padding:16px;font-size:17px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
-  .btn-cancelar-del{background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:16px;cursor:pointer;font-family:Georgia,serif}
+  .btn-cancelar-del{background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
   #deleteOverlay{position:fixed;inset:0;z-index:299;display:none;background:#00000055}
   #deleteOverlay.show{display:block}
 
@@ -344,6 +345,7 @@
     <button id="btnTema" onclick="toggleTemaPanel(event)">🎨</button>
     <button id="btnSaidas" onclick="abrirSaidas()" title="Ver Saídas" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📤</button>
     <button id="btnPDF" onclick="exportarPDF()" title="Exportar PDF" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📄</button>
+    <button id="btnZap" onclick="compartilharEstoqueTexto()" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">💬</button>
   </div>
 </header>
 
@@ -414,6 +416,7 @@
   <div class="saidas-list" id="saidasList"></div>
   <div class="saidas-footer">
     <button class="btn-clear-saidas" style="flex:1" onclick="limparSaidas()">Limpar</button>
+    <button onclick="compartilharSaidasTexto()" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">💬</button>
     <button onclick="compartilharSaidas()" title="Exportar PDF" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">📄</button>
   </div>
 </div>
@@ -640,6 +643,7 @@ function irView(view){
   document.getElementById("btnVoltar").className=view!=="home"?"show":"";
   document.getElementById("fab").className=view==="tipo"?"show":"";
   document.getElementById("btnPDF").style.display=view==="tipo"?"inline-flex":"none";
+  document.getElementById("btnZap").style.display=view==="tipo"?"inline-flex":"none";
   document.getElementById("btnSaidas").style.display=view==="tipo"?"inline-flex":"none";
   closeFab();
 }
@@ -1647,6 +1651,173 @@ function exportarPDF() {
 }
 
 
+// ===== COMPARTILHAR POR TEXTO (WHATSAPP) =====
+
+function _ordenarItensEstoque(itens) {
+  return itens.slice().sort((a, b) => {
+    const na = (a.tipo || "").toLowerCase().trim();
+    const nb = (b.tipo || "").toLowerCase().trim();
+    if (na && !nb) return -1;
+    if (!na && nb) return 1;
+    if (na !== nb) return na.localeCompare(nb, "pt-BR");
+    return Number(b.largura) - Number(a.largura);
+  });
+}
+
+function _toBoldDigits(s) {
+  const M = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'};
+  return String(s).split('').map(c => M[c] || c).join('');
+}
+
+function _blocoMonoEstoque(lista) {
+  if (!lista.length) return "";
+  const FIG = "\u2007"; // figure space — mesma largura de um dígito
+  const maxQtd = Math.max(...lista.map(i => String(i.qtd).length));
+  return lista.map(it => {
+    const q = String(it.qtd);
+    const pad = FIG.repeat(maxQtd - q.length);
+    const nome = it.tipo || (it.categoria === "porta" ? "Porta" : "Janela");
+    return `${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nome}`;
+  }).join("\n");
+}
+
+function _montarTextoEstoque(m, itens, filtros) {
+  filtros = filtros || {};
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const portas = _ordenarItensEstoque(itens.filter(i => i.categoria === "porta"));
+  const janelas = _ordenarItensEstoque(itens.filter(i => i.categoria === "janela"));
+  const totalP = portas.reduce((s,i) => s + Number(i.qtd), 0);
+  const totalJ = janelas.reduce((s,i) => s + Number(i.qtd), 0);
+  const total = totalP + totalJ;
+
+  const linhas = [];
+  linhas.push(`*🚪 ESTOQUE — ${m.nome.toUpperCase()}*`);
+  linhas.push(`_${hoje}_`);
+  linhas.push("");
+  linhas.push(`*TOTAL: ${total} un*`);
+
+  if (portas.length) {
+    linhas.push("");
+    linhas.push(`*🚪 PORTAS — ${totalP} un*`);
+    linhas.push(_blocoMonoEstoque(portas));
+  }
+  if (janelas.length) {
+    linhas.push("");
+    linhas.push(`*🪟 JANELAS — ${totalJ} un*`);
+    linhas.push(_blocoMonoEstoque(janelas));
+  }
+  linhas.push("");
+  linhas.push("_Estoque de portas JL_");
+  return linhas.join("\n");
+}
+
+function _montarTextoSaidas(m, mSaidas) {
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const motorista = (document.getElementById("inputMotorista")?.value || "").trim();
+  const total = mSaidas.reduce((a,s) => a + Number(s.qtd), 0);
+
+  // Agrupa por espécie+largura (mesma lógica do PDF)
+  const grupos = {};
+  mSaidas.forEach(s => {
+    const chave = s.nome + "||" + s.largura;
+    if (grupos[chave]) grupos[chave].qtd += Number(s.qtd);
+    else grupos[chave] = { ...s, qtd: Number(s.qtd) };
+  });
+  const speciesLastIndex = {};
+  mSaidas.forEach((s, i) => {
+    const k = (s.nome || "").toLowerCase().trim();
+    speciesLastIndex[k] = i;
+  });
+  const agrupados = Object.values(grupos).sort((a, b) => {
+    const ka = (a.nome || "").toLowerCase().trim();
+    const kb = (b.nome || "").toLowerCase().trim();
+    if (ka !== kb) return (speciesLastIndex[kb] ?? 0) - (speciesLastIndex[ka] ?? 0);
+    return Number(b.largura) - Number(a.largura);
+  });
+
+  const linhas = [];
+  linhas.push(`*📤 SAÍDAS — ${m.nome.toUpperCase()}*`);
+  linhas.push(`_${hoje}_`);
+  if (motorista) linhas.push(`*Motorista:* ${motorista}`);
+  linhas.push("");
+  linhas.push(`*TOTAL: ${total} un*`);
+  linhas.push("");
+
+  // Subtotais por espécie
+  let lastEspecie = null;
+  let subAcc = 0;
+  const blocos = [];
+  let blocoAtual = [];
+
+  agrupados.forEach(it => {
+    const especie = (it.nome || "").trim();
+    if (especie !== lastEspecie) {
+      if (blocoAtual.length) {
+        blocos.push({ especie: lastEspecie, sub: subAcc, itens: blocoAtual });
+      }
+      lastEspecie = especie;
+      subAcc = 0;
+      blocoAtual = [];
+    }
+    subAcc += Number(it.qtd);
+    blocoAtual.push(it);
+  });
+  if (blocoAtual.length) blocos.push({ especie: lastEspecie, sub: subAcc, itens: blocoAtual });
+
+  // Largura máxima do qtd em TODAS as saídas (alinhamento global)
+  const FIG = "\u2007";
+  const maxQtd = Math.max(...agrupados.map(i => String(i.qtd).length));
+
+  blocos.forEach(b => {
+    if (b.especie) linhas.push(`*${b.especie.toUpperCase()} — ${b.sub} un*`);
+    b.itens.forEach(it => {
+      const q = String(it.qtd);
+      const pad = FIG.repeat(maxQtd - q.length);
+      linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm`);
+    });
+    linhas.push("");
+  });
+
+  linhas.push("_Estoque de portas JL_");
+  return linhas.join("\n");
+}
+
+async function _enviarTexto(texto) {
+  // Tenta o compartilhamento nativo (mobile abre lista com WhatsApp)
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: texto });
+      return;
+    } catch (e) {
+      if (e.name === "AbortError") return; // usuário cancelou
+      // outros erros caem para fallback
+    }
+  }
+  // Fallback: abre o WhatsApp direto com o texto pronto
+  const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+  window.open(url, "_blank");
+}
+
+function compartilharEstoqueTexto() {
+  const m = getMarceneiro();
+  if (!m) return;
+  let itens = items.filter(i => i.marceneiroId === m.id);
+  // Aplica os mesmos filtros da tela
+  if (filtroCategoria) itens = itens.filter(i => i.categoria === filtroCategoria);
+  if (filtroBusca) itens = itens.filter(i => (i.tipo || "").toLowerCase().includes(filtroBusca.toLowerCase()));
+  if (!itens.length) { alert("Nenhum item para enviar com esse filtro."); return; }
+  _enviarTexto(_montarTextoEstoque(m, itens, { busca: filtroBusca, categoria: filtroCategoria }));
+}
+
+function compartilharSaidasTexto() {
+  const m = getMarceneiro();
+  if (!m) return;
+  const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
+  if (!mSaidas.length) { alert("Nenhuma saída registrada."); return; }
+  _enviarTexto(_montarTextoSaidas(m, mSaidas));
+}
+
+
 // EDITAR / EXCLUIR MARCENEIRO
 let editMarcId = null, deleteMarcId = null;
 
@@ -1709,7 +1880,7 @@ function renderLembreteList() {
     }
     return `<div class="lembrete-item">
       <span class="lembrete-item-txt" onclick="tapLembrete(${i})" style="cursor:pointer;user-select:none;-webkit-user-select:none">${l.txt}</span>
-      <button class="lembrete-item-del" onclick="deletarLembrete(${i})">✕</button>
+      <button class="lembrete-item-del" onclick="deletarLembrete(${i})">🗑</button>
     </div>`;
   }).join('');
   if (lembreteEditingIdx !== null) {
