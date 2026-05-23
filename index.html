@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -30,7 +31,7 @@
   header.hidden{transform:translateY(-100%)}
   .header-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px}
   .header-name{font-size:18px;color:var(--text);font-weight:bold;flex:1}
-  #btnVoltar{background:color-mix(in srgb,var(--accent) 15%,transparent);border:1px solid var(--border2);color:var(--accent);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;font-family:Georgia,serif;display:none;align-items:center;gap:4px;flex-shrink:0}
+  #btnVoltar{background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;font-weight:bold;font-family:Georgia,serif;display:none;align-items:center;gap:4px;flex-shrink:0;box-shadow:0 2px 8px rgba(58,123,213,0.35)}
   #btnVoltar.show{display:flex}
   #btnTema{background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;flex-shrink:0}
 
@@ -101,23 +102,28 @@
   /* LEMBRETE */
   #lembreteOverlay{position:fixed;inset:0;z-index:299;display:none;background:#00000066}
   #lembreteOverlay.show{display:block}
-  #lembretePanel{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:12px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease;max-height:80vh;overflow-y:auto}
+  #lembretePanel{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:16px 16px 28px;display:none;flex-direction:column;gap:12px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease;max-height:92vh;max-height:92dvh;overflow-y:auto}
   #lembretePanel.show{display:flex;transform:translateY(0)}
   #lembreteNomeLabel{font-size:13px;color:var(--accent);font-weight:bold;text-align:center;letter-spacing:1px}
   .lembrete-item{display:flex;align-items:flex-start;gap:10px;background:color-mix(in srgb,var(--accent) 8%,transparent);border:1px solid var(--border2);border-radius:10px;padding:10px 12px}
   .lembrete-item-txt{flex:1;font-size:14px;color:var(--text);line-height:1.4;white-space:pre-wrap;word-break:break-word}
-  .lembrete-item-input{flex:1;background:var(--input-bg);border:1px solid var(--accent);border-radius:6px;padding:6px 8px;color:var(--text);font-size:14px;font-family:Georgia,serif;outline:none;line-height:1.4;width:100%;resize:none;min-height:38px;overflow:hidden}
+  .lembrete-item-input{flex:1;background:var(--input-bg);border:1px solid var(--accent);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;line-height:1.5;width:100%;resize:none;min-height:160px;overflow:hidden}
   .lembrete-item-del{background:transparent;border:none;color:#e05050;font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1}
   .lembrete-vazio{font-size:13px;color:var(--text2);text-align:center;padding:8px 0}
   #lembreteTexto{background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;resize:none;min-height:70px;width:100%}
   #lembreteTexto:focus{border-color:var(--accent)}
-  .btn-add-lembrete{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1a1610;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
+  .btn-add-lembrete{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1e4ea0;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
   @keyframes bellPulse {
     0%, 100% { box-shadow: 0 0 6px 1px rgba(255,200,60,0.20), 0 0 0 0 rgba(255,200,60,0.25); }
     50%      { box-shadow: 0 0 14px 3px rgba(255,200,60,0.40), 0 0 0 4px rgba(255,200,60,0.00); }
   }
   .bell-aceso{ animation: bellPulse 1.8s ease-in-out infinite; filter: drop-shadow(0 0 2px rgba(255,200,60,0.30)); }
-  .btn-fechar-lembrete{background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:12px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
+  @keyframes saidasPulse {
+    0%, 100% { box-shadow: 0 0 5px 1px rgba(255,200,60,0.25); border-color: rgba(255,200,60,0.55) !important; }
+    50%      { box-shadow: 0 0 12px 3px rgba(255,200,60,0.55); border-color: rgba(255,200,60,1) !important; }
+  }
+  #btnSaidas.cheio{ animation: saidasPulse 1.4s ease-in-out infinite; color: #ffc83c !important; filter: drop-shadow(0 0 2px rgba(255,200,60,0.40)); }
+  .btn-fechar-lembrete{background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;box-shadow:0 3px 12px rgba(58,123,213,0.4)}
 
   /* MENU EXCLUIR */
   #deleteMenu{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:10px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease}
@@ -342,7 +348,7 @@
   <div class="header-inner">
     <button id="btnVoltar" onclick="voltar()">&#8249; Voltar</button>
     <div id="headerName" class="header-name"><span id="syncDot" class="offline" title="Status de sincronização"></span>Estoque de portas JL</div>
-    <button id="btnTema" onclick="toggleTemaPanel(event)">🎨</button>
+    <button id="btnTema" onclick="toggleTemaPanel(event)">⚙️</button>
     <button id="btnSaidas" onclick="abrirSaidas()" title="Ver Saídas" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📤</button>
     <button id="btnPDF" onclick="exportarPDF()" title="Exportar PDF" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📄</button>
     <button id="btnZap" onclick="compartilharEstoqueTexto()" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">💬</button>
@@ -368,7 +374,13 @@
   <div id="lembreteList"></div>
   <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
     <label style="font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase">Novo lembrete</label>
-    <textarea id="lembreteTexto" placeholder="Ex: Carregar 50 portas mista H na segunda-feira…"></textarea>
+    <div style="display:flex;gap:8px">
+      <button type="button" onclick="lembreteSinal('-')" title="Inserir VALE (saída)" style="flex:1;background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:10px;padding:10px;font-size:22px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">−</button>
+      <button type="button" onclick="lembreteSinal('+')" title="Inserir PRODUÇÃO (entrada)" style="flex:1;background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:10px;padding:10px;font-size:22px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">+</button>
+      <button type="button" onclick="lembreteX()" title="Multiplicação (qtd × valor)" style="flex:1;background:linear-gradient(135deg,#7a7a7a,#4a4a4a);color:#fff;border:none;border-radius:10px;padding:10px;font-size:20px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">×</button>
+    </div>
+    <textarea id="lembreteTexto" placeholder="Ex: Carregar 50 portas mista H na segunda-feira…" oninput="atualizarSaldoNovo()"></textarea>
+    <div id="lembreteNovoSaldo" style="display:none;font-size:14px;text-align:center;padding:8px 10px;border-radius:8px;font-weight:bold;letter-spacing:1px"></div>
     <button class="btn-add-lembrete" onclick="adicionarLembrete()">＋ Adicionar</button>
   </div>
   <button class="btn-fechar-lembrete" onclick="fecharLembrete()">Fechar</button>
@@ -396,6 +408,35 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <button onclick="fecharDevolver()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
     <button onclick="confirmarDevolver()" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">↩ Devolver</button>
+  </div>
+</div>
+
+<!-- NOVO CARREGAMENTO? (bottom sheet) -->
+<div id="novoCarrOverlay" onclick="fecharNovoCarr()" style="position:fixed;inset:0;z-index:399;display:none;background:#00000066"></div>
+<div id="novoCarrPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:400;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:22px 16px 32px;display:none;flex-direction:column;gap:12px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease">
+  <div style="text-align:center">
+    <div style="font-size:28px;margin-bottom:6px">⚠️</div>
+    <div style="font-size:11px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase">Saídas pendentes na caixa</div>
+    <div id="novoCarrInfo" style="font-size:15px;color:var(--text);margin-top:10px;line-height:1.4"></div>
+  </div>
+  <button onclick="novoCarrIniciar()" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;margin-top:4px">🆕 Iniciar novo carregamento</button>
+  <button onclick="novoCarrAdicionar()" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">➕ Adicionar ao carregamento atual</button>
+  <button onclick="fecharNovoCarr()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+</div>
+
+<!-- SENHA PARA EXCLUSÃO (bottom sheet) -->
+<div id="senhaOverlay" onclick="fecharSenha()" style="position:fixed;inset:0;z-index:499;display:none;background:#00000077"></div>
+<div id="senhaPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:22px 16px 32px;display:none;flex-direction:column;gap:14px;box-shadow:0 -8px 40px #00000080;transform:translateY(100%);transition:transform .25s ease">
+  <div style="text-align:center">
+    <div style="font-size:28px;margin-bottom:6px">🔒</div>
+    <div style="font-size:11px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase">Confirmação necessária</div>
+    <div id="senhaInfo" style="font-size:14px;color:var(--text);margin-top:8px;line-height:1.4">Digite a senha para confirmar a exclusão</div>
+  </div>
+  <input type="password" id="senhaInput" inputmode="numeric" autocomplete="off" placeholder="Senha" maxlength="20" onkeydown="if(event.key==='Enter')confirmarSenha()" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:16px;color:var(--text);font-size:22px;font-family:Georgia,serif;outline:none;text-align:center;font-weight:bold;letter-spacing:8px" />
+  <div id="senhaErr" style="font-size:13px;text-align:center;min-height:18px;color:var(--danger);font-weight:bold"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button onclick="fecharSenha()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="confirmarSenha()" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Confirmar</button>
   </div>
 </div>
 
@@ -645,6 +686,7 @@ function irView(view){
   document.getElementById("btnPDF").style.display=view==="tipo"?"inline-flex":"none";
   document.getElementById("btnZap").style.display=view==="tipo"?"inline-flex":"none";
   document.getElementById("btnSaidas").style.display=view==="tipo"?"inline-flex":"none";
+  if (view==="tipo") atualizarBtnSaidas();
   closeFab();
 }
 function voltar(){
@@ -891,18 +933,65 @@ function fecharDeleteMenu(){
   document.getElementById("deleteOverlay").classList.remove("show");
   document.getElementById("deleteMenu").classList.remove("show");
 }
-function confirmarDelete(){
-  if(window._deletandoMarc && deleteMarcId){
-    window._deletandoMarc = false;
-    marceneiros = marceneiros.filter(m => m.id !== deleteMarcId);
-    items = items.filter(i => i.marceneiroId !== deleteMarcId);
-    saidas = saidas.filter(s => s.marceneiroId !== deleteMarcId);
-    salvarDados(); salvarSaidas(); fecharDeleteMenu(); renderHome();
-    deleteMarcId = null; return;
+// SENHA DE EXCLUSÃO
+const SENHA_EXCLUSAO = "123";
+let _aposSenhaOK = null;
+
+function pedirSenha(callback, mensagem) {
+  _aposSenhaOK = callback;
+  document.getElementById("senhaInput").value = "";
+  document.getElementById("senhaErr").textContent = "";
+  document.getElementById("senhaInfo").textContent = mensagem || "Digite a senha para confirmar a exclusão";
+  document.getElementById("senhaOverlay").style.display = "block";
+  const panel = document.getElementById("senhaPanel");
+  panel.style.display = "flex";
+  setTimeout(() => {
+    panel.style.transform = "translateY(0)";
+    document.getElementById("senhaInput").focus();
+  }, 10);
+}
+
+function fecharSenha() {
+  const panel = document.getElementById("senhaPanel");
+  panel.style.transform = "translateY(100%)";
+  setTimeout(() => {
+    panel.style.display = "none";
+    document.getElementById("senhaOverlay").style.display = "none";
+  }, 250);
+  _aposSenhaOK = null;
+}
+
+function confirmarSenha() {
+  const v = document.getElementById("senhaInput").value.trim();
+  if (v !== SENHA_EXCLUSAO) {
+    document.getElementById("senhaErr").textContent = "Senha incorreta";
+    const inp = document.getElementById("senhaInput");
+    inp.value = "";
+    inp.style.borderColor = "var(--danger)";
+    setTimeout(() => inp.style.borderColor = "var(--border2)", 1500);
+    inp.focus();
+    return;
   }
-  if(!deleteId)return;
-  items=items.filter(i=>i.id!==deleteId);
-  salvarDados();fecharDeleteMenu();renderHistorico();renderHome();
+  const cb = _aposSenhaOK;
+  _aposSenhaOK = null;
+  fecharSenha();
+  if (cb) setTimeout(cb, 260); // espera o fechamento do painel
+}
+
+function confirmarDelete(){
+  pedirSenha(() => {
+    if(window._deletandoMarc && deleteMarcId){
+      window._deletandoMarc = false;
+      marceneiros = marceneiros.filter(m => m.id !== deleteMarcId);
+      items = items.filter(i => i.marceneiroId !== deleteMarcId);
+      saidas = saidas.filter(s => s.marceneiroId !== deleteMarcId);
+      salvarDados(); salvarSaidas(); fecharDeleteMenu(); renderHome();
+      deleteMarcId = null; return;
+    }
+    if(!deleteId)return;
+    items=items.filter(i=>i.id!==deleteId);
+    salvarDados();fecharDeleteMenu();renderHistorico();renderHome();
+  });
 }
 
 
@@ -1087,7 +1176,16 @@ let saidas = [];
 function carregarSaidas() {
   try { saidas = JSON.parse(localStorage.getItem("saidas")) || []; } catch { saidas = []; }
 }
-function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush() }
+function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush();atualizarBtnSaidas(); }
+
+function atualizarBtnSaidas() {
+  const btn = document.getElementById("btnSaidas");
+  if (!btn) return;
+  const m = getMarceneiro();
+  const tem = m && saidas.some(s => s.marceneiroId === m.id);
+  if (tem) btn.classList.add("cheio");
+  else btn.classList.remove("cheio");
+}
 
 function registrarSaida(marceneiroId, nome, largura, qtd, categoria) {
   saidas.push({
@@ -1164,7 +1262,7 @@ function renderSaidas() {
     // Linha do total
     const totalLine = document.createElement("div");
     totalLine.style.cssText = "display:flex;align-items:center;gap:5px";
-    totalLine.innerHTML = `<span style="display:inline-flex;align-items:baseline;gap:1px"><span style="font-size:18px;font-weight:900;color:var(--accent)">${speciesAcc}</span><span style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase">un</span></span><span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px;text-transform:uppercase">Total</span><span style="font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase">${speciesNome}</span>`;
+    totalLine.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px;text-transform:uppercase">Total</span><span style="display:inline-flex;align-items:baseline;gap:1px"><span style="font-size:18px;font-weight:900;color:var(--accent)">${speciesAcc}</span><span style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase">un</span></span>`;
     sub.appendChild(totalLine);
 
     list.appendChild(sub);
@@ -1294,10 +1392,12 @@ function confirmarDevolver(){
 
 function limparSaidas() {
   const m = getMarceneiro(); if (!m) return;
-  if (!confirm("Limpar todas as saídas de " + m.nome + "?")) return;
-  saidas = saidas.filter(s => s.marceneiroId !== m.id);
-  salvarSaidas(); renderSaidas();
-  document.getElementById("inputMotorista").value = "";
+  if (!saidas.some(s => s.marceneiroId === m.id)) return;
+  pedirSenha(() => {
+    saidas = saidas.filter(s => s.marceneiroId !== m.id);
+    salvarSaidas(); renderSaidas();
+    document.getElementById("inputMotorista").value = "";
+  }, `Digite a senha para limpar as saídas de ${m.nome}`);
 }
 
 function compartilharSaidas() {
@@ -1533,6 +1633,32 @@ function aplicarMove(sinal) {
   }
   const idx = items.findIndex(i => i.id === moveId);
   if (idx === -1) return;
+
+  // Se for SAÍDA, checar se já existem saídas de OUTROS dias na caixa
+  if (sinal === '-') {
+    const antes = items[idx].qtd;
+    if (val > antes) {
+      document.getElementById("moveFeedback").style.color = "var(--danger)";
+      document.getElementById("moveFeedback").textContent = `Saldo insuficiente (atual: ${antes})`;
+      return;
+    }
+    const marcId = items[idx].marceneiroId;
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    const saidasAntigas = saidas.filter(s => s.marceneiroId === marcId && s.data !== hoje);
+    if (saidasAntigas.length) {
+      // Guarda a operação pendente e abre o modal
+      _pendingMove = { sinal, val, idx };
+      abrirNovoCarr(saidasAntigas);
+      return;
+    }
+  }
+
+  _executarMove(sinal, val, idx);
+}
+
+let _pendingMove = null;
+
+function _executarMove(sinal, val, idx) {
   const antes = items[idx].qtd;
   if (sinal === '+') {
     items[idx].qtd = antes + val;
@@ -1554,6 +1680,52 @@ function aplicarMove(sinal) {
   document.getElementById("moveSaldo").textContent = "Saldo atual: " + items[idx].qtd;
   document.getElementById("moveQtd").value = "";
   salvarDados(); renderHistorico(); renderHome(); setTimeout(()=>flashCard(moveId),50);
+}
+
+// MODAL NOVO CARREGAMENTO
+function abrirNovoCarr(saidasAntigas) {
+  const datas = [...new Set(saidasAntigas.map(s => s.data))];
+  const total = saidasAntigas.reduce((a,s) => a + Number(s.qtd), 0);
+  const dataLabel = datas.length === 1
+    ? `Há <b style="color:var(--accent)">${total} un</b> em saídas do dia <b style="color:var(--accent)">${datas[0]}</b> ainda na caixa.<br>O que deseja fazer?`
+    : `Há <b style="color:var(--accent)">${total} un</b> em saídas dos dias <b style="color:var(--accent)">${datas.join(", ")}</b> ainda na caixa.<br>O que deseja fazer?`;
+  document.getElementById("novoCarrInfo").innerHTML = dataLabel;
+  document.getElementById("novoCarrOverlay").style.display = "block";
+  const panel = document.getElementById("novoCarrPanel");
+  panel.style.display = "flex";
+  setTimeout(() => panel.style.transform = "translateY(0)", 10);
+}
+
+function fecharNovoCarr() {
+  const panel = document.getElementById("novoCarrPanel");
+  panel.style.transform = "translateY(100%)";
+  setTimeout(() => {
+    panel.style.display = "none";
+    document.getElementById("novoCarrOverlay").style.display = "none";
+  }, 250);
+  _pendingMove = null;
+}
+
+function novoCarrIniciar() {
+  if (!_pendingMove) { fecharNovoCarr(); return; }
+  const { sinal, val, idx } = _pendingMove;
+  const marcId = items[idx].marceneiroId;
+  // Limpa saídas desse marceneiro e o motorista
+  saidas = saidas.filter(s => s.marceneiroId !== marcId);
+  const inpMot = document.getElementById("inputMotorista");
+  if (inpMot) inpMot.value = "";
+  salvarSaidas();
+  _pendingMove = null;
+  fecharNovoCarr();
+  _executarMove(sinal, val, idx);
+}
+
+function novoCarrAdicionar() {
+  if (!_pendingMove) { fecharNovoCarr(); return; }
+  const { sinal, val, idx } = _pendingMove;
+  _pendingMove = null;
+  fecharNovoCarr();
+  _executarMove(sinal, val, idx);
 }
 
 
@@ -1769,12 +1941,13 @@ function _montarTextoSaidas(m, mSaidas) {
   const maxQtd = Math.max(...agrupados.map(i => String(i.qtd).length));
 
   blocos.forEach(b => {
-    if (b.especie) linhas.push(`*${b.especie.toUpperCase()} — ${b.sub} un*`);
+    const nomeEspecie = b.especie || "";
     b.itens.forEach(it => {
       const q = String(it.qtd);
       const pad = FIG.repeat(maxQtd - q.length);
-      linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm`);
+      linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nomeEspecie}`);
     });
+    linhas.push(`*TOTAL ${b.sub}un*`);
     linhas.push("");
   });
 
@@ -1860,6 +2033,7 @@ function abrirLembrete(id, nome) {
   lembreteIdAtual = id;
   document.getElementById("lembreteNomeLabel").textContent = "🔔 " + nome;
   document.getElementById("lembreteTexto").value = "";
+  atualizarSaldoNovo();
   renderLembreteList();
   document.getElementById("lembreteOverlay").classList.add("show");
   document.getElementById("lembretePanel").classList.add("show");
@@ -1871,25 +2045,46 @@ function renderLembreteList() {
   div.innerHTML = lista.map((l, i) => {
     if (i === lembreteEditingIdx) {
       const safe = (l.txt || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-      return `<div class="lembrete-item">
+      return `<div class="lembrete-item" style="flex-direction:column;align-items:stretch">
         <textarea class="lembrete-item-input" id="lembreteEditInput${i}" rows="1"
-          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';atualizarSaldoEdit(${i})"
           onkeydown="if(event.key==='Escape'){cancelarEdicaoLembrete();}"
           onblur="salvarEdicaoLembrete(${i})">${safe}</textarea>
+        <div id="lembreteEditSaldo${i}" style="display:none;font-size:13px;text-align:center;padding:5px 9px;border-radius:6px;font-weight:bold;letter-spacing:1px;margin-top:6px"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button type="button" onclick="lembreteSinal('-')" style="flex:0 0 44px;background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:8px;padding:7px 0;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">−</button>
+          <button type="button" onclick="lembreteSinal('+')" style="flex:0 0 44px;background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:8px;padding:7px 0;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">+</button>
+          <button type="button" onclick="lembreteX()" title="Multiplicação (qtd × valor)" style="flex:0 0 44px;background:linear-gradient(135deg,#7a7a7a,#4a4a4a);color:#fff;border:none;border-radius:8px;padding:7px 0;font-size:17px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">×</button>
+          <button type="button" onclick="lancarEdicaoLembrete(${i})" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff;border:none;border-radius:8px;padding:7px 10px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation;letter-spacing:1px;box-shadow:0 2px 8px rgba(58,123,213,0.35)">LANÇAR</button>
+        </div>
       </div>`;
     }
+    const saldo = calcularSaldoLembrete(l.txt);
+    let saldoHtml = "";
+    if (saldo !== null) {
+      const cor = saldo > 0 ? "#2a9a50" : (saldo < 0 ? "#e05050" : "var(--text2)");
+      const bg  = saldo > 0 ? "#2a9a5022" : (saldo < 0 ? "#e0505022" : "transparent");
+      saldoHtml = `<div style="margin-top:6px;padding:5px 9px;border-radius:6px;font-size:13px;font-weight:bold;letter-spacing:1px;color:${cor};background:${bg};border:1px solid ${cor};display:inline-block">SALDO: ${formatarSaldo(saldo)}</div>`;
+    }
     return `<div class="lembrete-item">
-      <span class="lembrete-item-txt" onclick="tapLembrete(${i})" style="cursor:pointer;user-select:none;-webkit-user-select:none">${l.txt}</span>
+      <div style="flex:1;min-width:0">
+        <span class="lembrete-item-txt" onclick="tapLembrete(${i})" style="cursor:pointer;user-select:none;-webkit-user-select:none;display:block">${l.txt}</span>
+        ${saldoHtml}
+      </div>
       <button class="lembrete-item-del" onclick="deletarLembrete(${i})">🗑</button>
     </div>`;
   }).join('');
   if (lembreteEditingIdx !== null) {
     const inp = document.getElementById("lembreteEditInput" + lembreteEditingIdx);
     if (inp) {
-      inp.style.height = "auto";
-      inp.style.height = inp.scrollHeight + "px";
+      // Ajusta altura após o navegador calcular o layout (garante scrollHeight correto)
+      requestAnimationFrame(() => {
+        inp.style.height = "auto";
+        inp.style.height = inp.scrollHeight + "px";
+      });
       inp.focus();
       inp.setSelectionRange(inp.value.length, inp.value.length);
+      atualizarSaldoEdit(lembreteEditingIdx);
     }
   }
 }
@@ -1905,10 +2100,12 @@ function tapLembrete(idx) {
     _lembreteLastTap = { idx, time: now };
   }
 }
-function salvarEdicaoLembrete(idx) {
+let _saveEditTimer = null;
+let _impedirSalvarBlur = false;
+function _executarSalvarEdicao(idx) {
   const inp = document.getElementById("lembreteEditInput" + idx);
   if (!inp) { lembreteEditingIdx = null; return; }
-  const novo = inp.value.trim();
+  const novo = processarMultiplicacoes(inp.value).trim();
   if (novo) {
     if (lembretes[lembreteIdAtual] && lembretes[lembreteIdAtual][idx]) {
       lembretes[lembreteIdAtual][idx].txt = novo;
@@ -1925,22 +2122,193 @@ function salvarEdicaoLembrete(idx) {
   lembreteEditingIdx = null;
   renderLembreteList();
 }
+
+function salvarEdicaoLembrete(idx) {
+  // Se o usuário acabou de tocar no botão X, ignora o save por blur
+  if (_impedirSalvarBlur) { _impedirSalvarBlur = false; return; }
+  // Atrasa o salvamento para dar tempo de cliques em outros botões (- / +) chegarem primeiro
+  if (_saveEditTimer) clearTimeout(_saveEditTimer);
+  _saveEditTimer = setTimeout(() => {
+    _saveEditTimer = null;
+    _executarSalvarEdicao(idx);
+  }, 220);
+}
+
+function lancarEdicaoLembrete(idx) {
+  // Salva imediatamente, sem esperar o timer
+  if (_saveEditTimer) { clearTimeout(_saveEditTimer); _saveEditTimer = null; }
+  _impedirSalvarBlur = false;
+  _executarSalvarEdicao(idx);
+}
 function cancelarEdicaoLembrete() {
+  _impedirSalvarBlur = false;
+  if (_saveEditTimer) { clearTimeout(_saveEditTimer); _saveEditTimer = null; }
   lembreteEditingIdx = null;
   renderLembreteList();
 }
+// SALDO AUTOMÁTICO em lembretes (vales/produção)
+function calcularSaldoLembrete(texto) {
+  if (!texto) return null;
+  const linhas = texto.split("\n");
+  let saldo = 0;
+  let temEntradas = false;
+  for (const linha of linhas) {
+    // Tenta multiplicação primeiro: "10x20", "+10x20,50", "- 5 x 30"
+    const mMul = linha.match(/^\s*([+\-−])?\s*(\d+(?:[.,]\d+)?)\s*[xX×]\s*(\d+(?:[.,]\d+)?)/);
+    if (mMul) {
+      const sinal = (mMul[1] === '-' || mMul[1] === '−') ? -1 : 1;
+      const a = parseFloat(mMul[2].replace(',', '.'));
+      const b = parseFloat(mMul[3].replace(',', '.'));
+      if (!isNaN(a) && !isNaN(b)) {
+        saldo += sinal * a * b;
+        temEntradas = true;
+      }
+      continue;
+    }
+    // Senão tenta entrada simples com sinal
+    const m = linha.match(/^\s*([+\-−])\s*(\d+(?:[.,]\d+)?)/);
+    if (m) {
+      const sinal = (m[1] === '-' || m[1] === '−') ? -1 : 1;
+      const num = parseFloat(m[2].replace(',', '.'));
+      if (!isNaN(num)) {
+        saldo += sinal * num;
+        temEntradas = true;
+      }
+    }
+  }
+  return temEntradas ? saldo : null;
+}
+
+// Converte linhas como "10x20" em "+200" (preservando o restante da linha)
+function processarMultiplicacoes(texto) {
+  if (!texto) return texto;
+  return texto.split("\n").map(linha => {
+    const m = linha.match(/^(\s*)([+\-−])?\s*(\d+(?:[.,]\d+)?)\s*[xX×]\s*(\d+(?:[.,]\d+)?)(.*)$/);
+    if (!m) return linha;
+    const leading = m[1] || "";
+    const sinal = m[2];
+    const a = parseFloat(m[3].replace(',', '.'));
+    const b = parseFloat(m[4].replace(',', '.'));
+    const resto = m[5] || "";
+    if (isNaN(a) || isNaN(b)) return linha;
+    const sinalNum = (sinal === '-' || sinal === '−') ? -1 : 1;
+    const total = sinalNum * a * b;
+    const abs = Math.abs(total);
+    const totalFmt = (abs % 1 === 0) ? String(abs) : abs.toFixed(2).replace('.', ',');
+    const sinalChar = total < 0 ? '−' : '+';
+    return `${leading}${sinalChar}${totalFmt}${resto}`;
+  }).join("\n");
+}
+
+function formatarSaldo(saldo) {
+  const abs = Math.abs(saldo);
+  const fmt = (abs % 1 === 0) ? String(abs) : abs.toFixed(2).replace('.', ',');
+  const sinal = saldo > 0 ? '+' : (saldo < 0 ? '−' : '');
+  return `${sinal}${fmt}`;
+}
+
+function lembreteSinal(sinal) {
+  // Cancela o salvamento pendente do blur (se houver edição em andamento)
+  if (_saveEditTimer) { clearTimeout(_saveEditTimer); _saveEditTimer = null; }
+  // Se houver um lembrete sendo editado, insere nele; senão, no campo de novo lembrete
+  let ta;
+  const editando = (lembreteEditingIdx !== null);
+  if (editando) {
+    ta = document.getElementById("lembreteEditInput" + lembreteEditingIdx);
+  }
+  if (!ta) ta = document.getElementById("lembreteTexto");
+  if (!ta) return;
+  const txt = ta.value;
+  const prefix = (txt.length === 0 || txt.endsWith("\n")) ? "" : "\n";
+  ta.value = txt + prefix + sinal + " ";
+  // Re-ajusta a altura do textarea de edição (que cresce com o conteúdo)
+  if (editando) {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
+    atualizarSaldoEdit(lembreteEditingIdx);
+  } else {
+    atualizarSaldoNovo();
+  }
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
+function lembreteX() {
+  // Insere 'x' na posição atual do cursor (sem quebrar linha) — para multiplicações tipo 10x20
+  if (_saveEditTimer) { clearTimeout(_saveEditTimer); _saveEditTimer = null; }
+  let ta;
+  const editando = (lembreteEditingIdx !== null);
+  if (editando) {
+    ta = document.getElementById("lembreteEditInput" + lembreteEditingIdx);
+  }
+  if (!ta) ta = document.getElementById("lembreteTexto");
+  if (!ta) return;
+  const start = (typeof ta.selectionStart === "number") ? ta.selectionStart : ta.value.length;
+  const end   = (typeof ta.selectionEnd   === "number") ? ta.selectionEnd   : ta.value.length;
+  ta.value = ta.value.slice(0, start) + "x" + ta.value.slice(end);
+  const newPos = start + 1;
+  if (editando) {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
+    atualizarSaldoEdit(lembreteEditingIdx);
+  } else {
+    atualizarSaldoNovo();
+  }
+  ta.focus();
+  ta.setSelectionRange(newPos, newPos);
+}
+
+function atualizarSaldoNovo() {
+  const txt = document.getElementById("lembreteTexto").value;
+  const saldo = calcularSaldoLembrete(txt);
+  const div = document.getElementById("lembreteNovoSaldo");
+  if (!div) return;
+  if (saldo === null) {
+    div.style.display = "none";
+    return;
+  }
+  div.style.display = "block";
+  const cor = saldo > 0 ? "#2a9a50" : (saldo < 0 ? "#e05050" : "var(--text2)");
+  const bg  = saldo > 0 ? "#2a9a5022" : (saldo < 0 ? "#e0505022" : "transparent");
+  div.style.color = cor;
+  div.style.background = bg;
+  div.style.border = "1px solid " + cor;
+  div.textContent = `SALDO: ${formatarSaldo(saldo)}`;
+}
+
+function atualizarSaldoEdit(idx) {
+  const inp = document.getElementById("lembreteEditInput" + idx);
+  const div = document.getElementById("lembreteEditSaldo" + idx);
+  if (!inp || !div) return;
+  const saldo = calcularSaldoLembrete(inp.value);
+  if (saldo === null) { div.style.display = "none"; return; }
+  const cor = saldo > 0 ? "#2a9a50" : (saldo < 0 ? "#e05050" : "var(--text2)");
+  const bg  = saldo > 0 ? "#2a9a5022" : (saldo < 0 ? "#e0505022" : "transparent");
+  div.style.display = "block";
+  div.style.color = cor;
+  div.style.background = bg;
+  div.style.border = "1px solid " + cor;
+  div.textContent = `SALDO: ${formatarSaldo(saldo)}`;
+}
+
+
 function adicionarLembrete() {
-  const txt = document.getElementById("lembreteTexto").value.trim();
+  const ta = document.getElementById("lembreteTexto");
+  ta.value = processarMultiplicacoes(ta.value);
+  const txt = ta.value.trim();
   if (!txt) return;
   if (!lembretes[lembreteIdAtual]) lembretes[lembreteIdAtual] = [];
   lembretes[lembreteIdAtual].push({ txt });
   document.getElementById("lembreteTexto").value = "";
+  atualizarSaldoNovo();
   salvarDados(); renderLembreteList(); renderHome();
 }
 function deletarLembrete(idx) {
-  lembretes[lembreteIdAtual].splice(idx, 1);
-  if (!lembretes[lembreteIdAtual].length) delete lembretes[lembreteIdAtual];
-  salvarDados(); renderLembreteList(); renderHome();
+  pedirSenha(() => {
+    lembretes[lembreteIdAtual].splice(idx, 1);
+    if (!lembretes[lembreteIdAtual].length) delete lembretes[lembreteIdAtual];
+    salvarDados(); renderLembreteList(); renderHome();
+  }, "Digite a senha para excluir este lembrete");
 }
 function fecharLembrete() {
   lembreteIdAtual = null;
@@ -2015,6 +2383,7 @@ function cloudSubscribe(){
     setSyncStatus("online");
     // re-render do que estiver visível
     try { if (viewAtual === "home") renderHome(); else if (viewAtual === "historico") renderHistorico(); } catch(e){}
+    atualizarBtnSaidas();
   }, (err) => {
     console.error("Erro snapshot:", err); setSyncStatus("error");
   });
