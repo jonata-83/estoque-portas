@@ -31,8 +31,8 @@
   header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 14px;position:sticky;top:0;z-index:20;transition:transform .3s,background .3s}
   header.hidden{transform:translateY(-100%)}
   .header-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:10px}
-  .header-name{font-size:15px;color:var(--text);font-weight:bold;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #btnVoltar{background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;font-weight:bold;font-family:Georgia,serif;display:none;align-items:center;gap:4px;flex-shrink:0;box-shadow:0 2px 8px rgba(58,123,213,0.35)}
+  .header-name{font-size:15px;color:var(--text);font-weight:bold;flex:1;line-height:1.25}
+  #btnVoltar{background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:4px 12px;cursor:pointer;font-size:20px;font-weight:bold;font-family:Georgia,serif;display:none;align-items:center;gap:4px;flex-shrink:0;line-height:1}
   #btnVoltar.show{display:flex}
   #btnTema{background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;flex-shrink:0}
 
@@ -110,6 +110,7 @@
   .lembrete-item-txt{flex:1;font-size:14px;color:var(--text);line-height:1.4;white-space:pre-wrap;word-break:break-word}
   .lembrete-item-input{flex:1;background:var(--input-bg);border:1px solid var(--accent);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;line-height:1.5;width:100%;resize:none;min-height:160px;overflow:hidden}
   .lembrete-item-del{background:transparent;border:none;color:#e05050;font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1}
+  .lembrete-item-send{background:transparent;border:none;color:#25D366;font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1}
   .lembrete-vazio{font-size:13px;color:var(--text2);text-align:center;padding:8px 0}
   #lembreteTexto{background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;resize:none;min-height:220px;width:100%}
   #lembreteTexto:focus{border-color:var(--accent)}
@@ -357,9 +358,9 @@
 
 <header id="mainHeader">
   <div class="header-inner">
-    <button id="btnVoltar" onclick="voltar()">&#8249; Voltar</button>
+    <button id="btnVoltar" onclick="voltar()">✕</button>
     <div id="headerName" class="header-name"><span id="syncDot" class="offline" title="Status de sincronização"></span>Estoque de portas JL</div>
-    <button id="btnPedidos" onclick="irView('pedidos')" title="Pedidos" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:10px 18px;cursor:pointer;font-size:16px;font-family:Georgia,serif;font-weight:bold;flex-shrink:0">📋 Pedidos</button>
+    <button id="btnPedidos" onclick="irView('pedidos')" title="Pedidos" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:10px 18px;cursor:pointer;font-size:16px;font-family:Georgia,serif;font-weight:bold;flex-shrink:0;display:inline-flex;align-items:center;gap:8px">Pedidos <span id="pedidosBadge" style="display:none;background:#1a1610;color:#ffb84d;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:bold"></span></button>
     <button id="btnTema" onclick="toggleTemaPanel(event)">⚙️</button>
     <button id="btnSaidas" onclick="abrirSaidas()" title="Ver Saídas" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📤</button>
     <button id="btnPDF" onclick="exportarPDF()" title="Exportar PDF" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📄</button>
@@ -454,6 +455,33 @@
   </div>
 </div>
 
+<!-- PREÇO POR UNIDADE (SAÍDA) -->
+<div id="precoOverlay" onclick="fecharPrecoSaida()" style="position:fixed;inset:0;z-index:499;display:none;background:#00000077"></div>
+<div id="precoPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:22px 16px 32px;display:none;flex-direction:column;gap:14px;box-shadow:0 -8px 40px #00000080;transform:translateY(100%);transition:transform .25s ease;overflow-y:auto;max-height:90vh">
+  <div style="text-align:center">
+    <div style="font-size:22px;font-weight:bold;color:var(--accent);margin-bottom:6px;font-family:Georgia,serif">R$</div>
+    <div style="font-size:11px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase">Preço por unidade</div>
+    <div id="precoInfo" style="font-size:14px;color:var(--text);margin-top:8px;line-height:1.4"></div>
+  </div>
+  <input type="number" id="precoInput" inputmode="decimal" step="0.01" min="0" autocomplete="off" placeholder="0,00" onkeydown="if(event.key==='Enter')confirmarPrecoSaida(false)" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:16px;color:var(--text);font-size:22px;font-family:Georgia,serif;outline:none;text-align:center;font-weight:bold" />
+  <button id="precoAplicarTodas" onclick="confirmarPrecoSaida(true)" style="background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:12px;padding:12px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;display:none">Aplicar este preço a todas as portas com este nome</button>
+  <button id="precoApagarBtn" onclick="apagarPrecoIndividual()" style="background:transparent;color:#e05050;border:1px solid #e0505044;border-radius:12px;padding:12px;font-size:14px;cursor:pointer;font-family:Georgia,serif;display:none">🗑 Apagar preço</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button onclick="fecharPrecoSaida()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="confirmarPrecoSaida(false)" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Salvar</button>
+  </div>
+</div>
+
+<!-- CONFIRMAÇÃO GENÉRICA -->
+<div id="confirmOverlay" style="position:fixed;inset:0;z-index:600;display:none;background:#00000077;align-items:center;justify-content:center"></div>
+<div id="confirmBox" style="position:fixed;z-index:601;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.9);display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px 20px 20px;width:min(340px,90vw);flex-direction:column;gap:16px;box-shadow:0 8px 40px #00000099;transition:transform .15s ease,opacity .15s ease;opacity:0">
+  <div id="confirmMsg" style="font-size:15px;color:var(--text);text-align:center;line-height:1.5"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button onclick="_confirmarNao()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button id="confirmOkBtn" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Confirmar</button>
+  </div>
+</div>
+
 <!-- PAINEL SAÍDAS -->
 <div id="saidasOverlay" onclick="fecharSaidas()"></div>
 <div id="saidasPanel">
@@ -463,7 +491,7 @@
       <span id="saidasNomeLabel" style="font-size:13px;color:var(--text);font-weight:bold;white-space:nowrap"></span>
       <span id="saidasDataLabel" style="font-size:11px;color:var(--text2);white-space:nowrap"></span>
     </div>
-    <button onclick="fecharSaidas()" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;white-space:nowrap;font-weight:bold">Voltar</button>
+    <button onclick="fecharSaidas()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:20px;cursor:pointer;padding:2px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;white-space:nowrap;line-height:1;font-weight:bold">✕</button>
   </div>
   <div style="padding:6px 14px 0;border-bottom:1px solid var(--border)">
     <input id="inputMotorista" placeholder="Motorista…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:6px 4px;color:var(--text);font-size:13px;font-family:Georgia,serif;outline:none;margin-bottom:6px"/>
@@ -471,8 +499,9 @@
   <div class="saidas-list" id="saidasList"></div>
   <div class="saidas-footer">
     <button class="btn-clear-saidas" style="flex:1" onclick="limparSaidas()">Limpar</button>
-    <button onclick="compartilharSaidasPNG()" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">🖼️</button>
+    <button onclick="compartilharSaidasPNG(this)" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">🖼️</button>
     <button onclick="compartilharSaidasTexto()" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">💬</button>
+    <button onclick="limparPrecosSaidas()" title="Limpar preços" style="background:transparent;border:1px solid #e0505044;color:#e05050;border-radius:10px;padding:13px 16px;font-size:16px;font-weight:bold;cursor:pointer;flex-shrink:0;font-family:Georgia,serif">R$✕</button>
     <button onclick="abrirSaidasHistorico()" title="Histórico" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">📜</button>
   </div>
 </div>
@@ -485,7 +514,7 @@
       <span class="saidas-title" style="font-size:13px;white-space:nowrap">📜 Histórico</span>
       <span id="saidasHistNomeLabel" style="font-size:13px;color:var(--text);font-weight:bold;white-space:nowrap"></span>
     </div>
-    <button onclick="fecharSaidasHistorico()" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;white-space:nowrap;font-weight:bold">Voltar</button>
+    <button onclick="fecharSaidasHistorico()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:20px;cursor:pointer;padding:2px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;white-space:nowrap;line-height:1;font-weight:bold">✕</button>
   </div>
   <div id="saidasHistList" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px"></div>
 </div>
@@ -536,6 +565,7 @@
 <div id="fabMenu">
   <div class="fab-option" id="fabPorta" onclick="fabIrForm('porta')"><span class="fab-emoji">🚪</span>Porta</div>
   <div class="fab-option" id="fabJanela" onclick="fabIrForm('janela')"><span class="fab-emoji">🪟</span>Janela</div>
+  <div class="fab-option" id="fabOutro" onclick="fabIrForm('outro')"><span class="fab-emoji">📦</span>Outro</div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -567,6 +597,12 @@
         <span class="home-total-emoji">🪟</span>
         <span class="home-total-num" id="totalJanelasGeral">0</span>
         <span class="home-total-label">Janelas</span>
+      </div>
+      <div class="home-total-div"></div>
+      <div class="home-total-item">
+        <span class="home-total-emoji">📦</span>
+        <span class="home-total-num" id="totalOutrosGeral">0</span>
+        <span class="home-total-label">Outros</span>
       </div>
     </div>
     <div class="section-header">
@@ -617,66 +653,59 @@
         <div class="field-group"><input id="fQtd6" type="number" placeholder="QTD" min="1" oninput="validarForm()"/></div>
         <div class="field-group wide"><input id="fLarg6" type="number" placeholder="80" oninput="validarForm()"/></div>
       </div>
-      <button class="btn-save" id="btnSalvar" onclick="salvar()" disabled>Salvar Lançamento</button>
+      <button class="btn-save" id="btnSalvar" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff" onclick="salvar()" disabled>Salvar Lançamento</button>
     </div>
   </div>
 
   <div id="secPedidos" class="section">
     <div class="section-header">
       <span class="section-title">Pedidos</span>
-      <button class="btn-add-home" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff" onclick="toggleFormPedido()">+ Adicionar Pedido</button>
+      <button class="btn-fechar-lembrete" onclick="toggleFormPedido()">+ Adicionar Pedido</button>
     </div>
     <div class="form-card" id="pedidoFormCard" style="margin-bottom:18px;display:none">
-      <div class="row-group">
-        <div class="field-group wide">
-          <label>Cliente</label>
-          <input id="pedCliente" placeholder="Nome do cliente…"/>
+      <div id="pedFormCamposExtra">
+        <div class="row-group">
+          <div class="field-group wide">
+            <label>Cliente</label>
+            <input id="pedCliente" placeholder="Nome do cliente…"/>
+          </div>
+        </div>
+        <div class="row-group">
+          <div class="field-group wide">
+            <label>Data de entrega</label>
+            <input id="pedDataEntrega" type="date"/>
+          </div>
+        </div>
+        <div class="row-group">
+          <div class="field-group wide">
+            <label>Tipo / Modelo</label>
+            <input id="pedTipo" placeholder="Ex: Almofadada, Lisa…"/>
+          </div>
         </div>
       </div>
       <div class="row-group">
         <div class="field-group wide">
-          <label>Data de entrega</label>
-          <input id="pedDataEntrega" type="date"/>
+          <div id="wrapVoltarItensPedido" style="display:none;align-items:center;justify-content:flex-end">
+            <button type="button" id="btnVoltarItensPedido" onclick="desativarModoItensPedido()" title="Fechar" style="flex-shrink:0;background:transparent;border:none;color:var(--text2);font-size:18px;cursor:pointer;line-height:1;padding:4px 6px">✕</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+            <div style="display:flex;gap:6px">
+              <button type="button" onclick="inserirLarguraPedido(120)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">120cm</button>
+              <button type="button" onclick="inserirLarguraPedido(110)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">110cm</button>
+              <button type="button" onclick="inserirLarguraPedido(100)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">100cm</button>
+              <button type="button" onclick="inserirLarguraPedido(90)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">90cm</button>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button type="button" onclick="inserirLarguraPedido(60)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">60cm</button>
+              <button type="button" onclick="inserirLarguraPedido(70)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">70cm</button>
+              <button type="button" onclick="inserirLarguraPedido(80)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">80cm</button>
+            </div>
+          </div>
+          <textarea id="pedItens" onfocus="ativarModoItensPedido()" placeholder="digitar..." style="min-height:180px;width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;resize:vertical"></textarea>
         </div>
       </div>
-      <div class="row-group">
-        <div class="field-group wide">
-          <label>Tipo / Modelo</label>
-          <input id="pedTipo" placeholder="Ex: Almofadada, Lisa…"/>
-        </div>
-      </div>
-      <div class="row-group" style="flex-wrap:wrap">
-        <div class="field-group"><label>Qtd</label><input id="pedQtd" type="number" placeholder="QTD" min="1"/></div>
-        <div class="field-group wide"><label>Largura (cm)</label><input id="pedLarg" type="number" value="120"/></div>
-        <div class="field-group" style="flex:1 1 100%;margin-top:-4px"><input id="pedNome" placeholder="Nome diferente (opcional)"/></div>
-      </div>
-      <div class="row-group" style="flex-wrap:wrap">
-        <div class="field-group"><input id="pedQtd2" type="number" placeholder="QTD" min="1"/></div>
-        <div class="field-group wide"><input id="pedLarg2" type="number" value="100"/></div>
-        <div class="field-group" style="flex:1 1 100%;margin-top:-4px"><input id="pedNome2" placeholder="Nome diferente (opcional)"/></div>
-      </div>
-      <div class="row-group" style="flex-wrap:wrap">
-        <div class="field-group"><input id="pedQtd3" type="number" placeholder="QTD" min="1"/></div>
-        <div class="field-group wide"><input id="pedLarg3" type="number" value="90"/></div>
-        <div class="field-group" style="flex:1 1 100%;margin-top:-4px"><input id="pedNome3" placeholder="Nome diferente (opcional)"/></div>
-      </div>
-      <div class="row-group" style="flex-wrap:wrap">
-        <div class="field-group"><input id="pedQtd4" type="number" placeholder="QTD" min="1"/></div>
-        <div class="field-group wide"><input id="pedLarg4" type="number" value="80"/></div>
-        <div class="field-group" style="flex:1 1 100%;margin-top:-4px"><input id="pedNome4" placeholder="Nome diferente (opcional)"/></div>
-      </div>
-      <div class="row-group" style="flex-wrap:wrap">
-        <div class="field-group"><input id="pedQtd5" type="number" placeholder="QTD" min="1"/></div>
-        <div class="field-group wide"><input id="pedLarg5" type="number" value="70"/></div>
-        <div class="field-group" style="flex:1 1 100%;margin-top:-4px"><input id="pedNome5" placeholder="Nome diferente (opcional)"/></div>
-      </div>
-      <div class="row-group" style="flex-wrap:wrap">
-        <div class="field-group"><input id="pedQtd6" type="number" placeholder="QTD" min="1"/></div>
-        <div class="field-group wide"><input id="pedLarg6" type="number" value="60"/></div>
-        <div class="field-group" style="flex:1 1 100%;margin-top:-4px"><input id="pedNome6" placeholder="Nome diferente (opcional)"/></div>
-      </div>
-      <button class="btn-save" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff" onclick="adicionarPedido()">Salvar Pedido</button>
-      <button class="btn-cancel" style="width:100%;margin-top:10px;padding:13px;border-radius:12px;text-align:center" onclick="toggleFormPedido()">✕ Fechar</button>
+      <button class="btn-save" style="background:linear-gradient(135deg,#3a9a50,#2a7a38);color:#fff;border:none" onclick="adicionarPedido()">Salvar Pedido</button>
+      <button class="btn-fechar-lembrete" style="width:100%;margin-top:2px" onclick="toggleFormPedido()">✕ Fechar</button>
     </div>
     <div class="hist-list" id="pedidosList"></div>
   </div>
@@ -763,7 +792,18 @@ function aplicarZoom(idx){
 function ciclarZoom(){ aplicarZoom((zoomIdx + 1) % ZOOM_LEVELS.length); }
 aplicarZoom(zoomIdx);
 
-function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush()}
+function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
+function atualizarBtnPedidos() {
+  const badge = document.getElementById("pedidosBadge");
+  if (!badge) return;
+  const grupos = new Set(pedidos.map(p => p.cliente + "||" + (p.dataEntrega || "")));
+  if (grupos.size > 0) {
+    badge.textContent = grupos.size;
+    badge.style.display = "inline-block";
+  } else {
+    badge.style.display = "none";
+  }
+}
 function carregarDados(){
   try{marceneiros=JSON.parse(localStorage.getItem("marceneiros"))||defaultM()}catch{marceneiros=defaultM()}
   try{items=JSON.parse(localStorage.getItem("items"))||[]}catch{items=[]}
@@ -795,6 +835,17 @@ function voltar(){
   else irView("home");
 }
 function getMarceneiro(){return marceneiros.find(m=>m.id===selectedId)}
+function _nomeItemCategoria(item) {
+  if (item.tipo) return item.tipo;
+  if (item.categoria === "porta") return "Porta";
+  if (item.categoria === "janela") return "Janela";
+  return "Outro";
+}
+function _emojiCategoria(cat) {
+  if (cat === "porta") return "🚪";
+  if (cat === "janela") return "🪟";
+  return "📦";
+}
 
 // FAB
 function toggleFab(){fabOpen?closeFab():openFab()}
@@ -808,15 +859,19 @@ function renderHome(){
   // Totais gerais — soma das quantidades
   const tp=items.filter(i=>i.categoria==="porta").reduce((s,i)=>s+Number(i.qtd),0);
   const tj=items.filter(i=>i.categoria==="janela").reduce((s,i)=>s+Number(i.qtd),0);
+  const to=items.filter(i=>i.categoria==="outro").reduce((s,i)=>s+Number(i.qtd),0);
   const elP=document.getElementById("totalPortasGeral");
   const elJ=document.getElementById("totalJanelasGeral");
+  const elO=document.getElementById("totalOutrosGeral");
   if(elP)elP.textContent=tp;
   if(elJ)elJ.textContent=tj;
+  if(elO)elO.textContent=to;
 
   marceneiros.forEach(m=>{
     const[light,dark]=CORES[m.id%CORES.length];
     const p=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="porta").reduce((s,i)=>s+Number(i.qtd),0);
     const j=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="janela").reduce((s,i)=>s+Number(i.qtd),0);
+    const o=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="outro").reduce((s,i)=>s+Number(i.qtd),0);
     const div=document.createElement("div");div.className="marc-card";
     div.style.cssText=`background:linear-gradient(135deg,${light}18 0%,${dark}0a 100%);border-color:${light}44`;
     const mLembretes = lembretes[m.id] || [];
@@ -834,6 +889,7 @@ function renderHome(){
         <div class="marc-stat">🚪 <strong>${p}</strong> porta${p!==1?"s":""}</div>
         <span style="color:var(--border2)">·</span>
         <div class="marc-stat">🪟 <strong>${j}</strong> janela${j!==1?"s":""}</div>
+        ${o ? `<span style="color:var(--border2)">·</span><div class="marc-stat">📦 <strong>${o}</strong> outro${o!==1?"s":""}</div>` : ""}
       </div>`;
 
     const btnLembrete = div.querySelector(".btn-lembrete-marc");
@@ -942,7 +998,7 @@ function renderHistorico(){
   }
   if(!todos.length){div.innerHTML=`<p style="color:var(--text2);font-size:14px;margin-top:30px;text-align:center">Nenhum lançamento.<br>Use o botão + para adicionar.</p>`;return}
   const totalQtd=itens.reduce((s,i)=>s+Number(i.qtd),0);
-  const filtroInfo=filtroCategoria?`<span style="font-size:11px;color:var(--accent);margin-left:8px;cursor:pointer" onclick="filtroCategoria=null;renderHistorico()">${filtroCategoria==="porta"?"🚪":"🪟"} ✕</span>`:"";
+  const filtroInfo=filtroCategoria?`<span style="font-size:11px;color:var(--accent);margin-left:8px;cursor:pointer" onclick="filtroCategoria=null;renderHistorico()">${_emojiCategoria(filtroCategoria)} ✕</span>`:"";
   div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <div class="hist-title" style="margin:0">Lançamentos${filtroInfo}</div>
@@ -964,10 +1020,10 @@ function renderHistorico(){
 
 // DOUBLE TAP
 function buildHistItem(item,list){
-  const nome=item.tipo||(item.categoria==="porta"?"Porta":"Janela");
+  const nome=_nomeItemCategoria(item);
   const medidas=`<span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px;color:var(--text)">${item.qtd}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px">${item.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span>`;
   const el=document.createElement("div");el.className="hist-item";el.dataset.id=item.id;
-  const emoji = item.categoria === "porta" ? "🚪" : "🪟";
+  const emoji = _emojiCategoria(item.categoria);
   el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap"><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu(${item.id})" style="cursor:pointer;flex-shrink:0">${medidas}</span><span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${nome}</span></div></div><div class="hist-handle">⋮⋮</div>`;
   // Filtro ao clicar no emoji
   el.querySelector(".hist-emoji").addEventListener("click", e => {
@@ -1078,6 +1134,112 @@ function confirmarSenha() {
   if (cb) setTimeout(cb, 260); // espera o fechamento do painel
 }
 
+let _precoSaidaChave = null;
+let _precoSaidaNome = null;
+function abrirPrecoSaida(chave, nome, largura) {
+  _precoSaidaChave = chave;
+  _precoSaidaNome = nome;
+  document.getElementById("precoInfo").textContent = `${largura}cm  ${nome}`;
+  const atual = saidaPrecos[chave];
+  document.getElementById("precoInput").value = (atual != null && atual > 0) ? Number(atual).toFixed(2) : "";
+  document.getElementById("precoApagarBtn").style.display = (atual != null && atual > 0) ? "block" : "none";
+  const m = getMarceneiro();
+  const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
+  const outrasLarguras = mSaidas.filter(s => (s.nome||"").toLowerCase().trim() === (nome||"").toLowerCase().trim());
+  document.getElementById("precoAplicarTodas").style.display = outrasLarguras.length > 1 ? "block" : "none";
+  document.getElementById("precoOverlay").style.display = "block";
+  const panel = document.getElementById("precoPanel");
+  panel.style.display = "flex";
+  setTimeout(() => {
+    panel.style.transform = "translateY(0)";
+    document.getElementById("precoInput").focus();
+  }, 10);
+  // Sobe o painel quando teclado abre
+  if (window.visualViewport) {
+    window._precoVPHandler = () => {
+      const offset = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+      panel.style.bottom = Math.max(0, offset) + "px";
+    };
+    window.visualViewport.addEventListener("resize", window._precoVPHandler);
+    window.visualViewport.addEventListener("scroll", window._precoVPHandler);
+  }
+}
+
+function fecharPrecoSaida() {
+  const panel = document.getElementById("precoPanel");
+  panel.style.transform = "translateY(100%)";
+  panel.style.bottom = "0";
+  if (window.visualViewport && window._precoVPHandler) {
+    window.visualViewport.removeEventListener("resize", window._precoVPHandler);
+    window.visualViewport.removeEventListener("scroll", window._precoVPHandler);
+    window._precoVPHandler = null;
+  }
+  setTimeout(() => {
+    panel.style.display = "none";
+    document.getElementById("precoOverlay").style.display = "none";
+  }, 250);
+  _precoSaidaChave = null;
+  _precoSaidaNome = null;
+}
+
+let _confirmCallback = null;
+function _pedirConfirmacao(msg, callback, okLabel, okColor) {
+  _confirmCallback = callback;
+  document.getElementById("confirmMsg").textContent = msg;
+  const okBtn = document.getElementById("confirmOkBtn");
+  okBtn.textContent = okLabel || "Confirmar";
+  okBtn.style.background = okColor || "linear-gradient(135deg,#e05050,#a02020)";
+  okBtn.onclick = _confirmarSim;
+  document.getElementById("confirmOverlay").style.display = "block";
+  const box = document.getElementById("confirmBox");
+  box.style.display = "flex";
+  setTimeout(() => { box.style.transform = "translate(-50%,-50%) scale(1)"; box.style.opacity = "1"; }, 10);
+}
+function _confirmarSim() {
+  const cb = _confirmCallback; _confirmCallback = null;
+  _fecharConfirmacao();
+  if (cb) setTimeout(cb, 200);
+}
+function _confirmarNao() { _confirmCallback = null; _fecharConfirmacao(); }
+function _fecharConfirmacao() {
+  const box = document.getElementById("confirmBox");
+  box.style.transform = "translate(-50%,-50%) scale(0.9)"; box.style.opacity = "0";
+  setTimeout(() => { box.style.display = "none"; document.getElementById("confirmOverlay").style.display = "none"; }, 150);
+}
+
+function apagarPrecoIndividual() {
+  if (!_precoSaidaChave) return;
+  delete saidaPrecos[_precoSaidaChave];
+  salvarSaidaPrecos();
+  fecharPrecoSaida();
+  renderSaidas();
+}
+
+
+function confirmarPrecoSaida(aplicarTodas) {
+  if (!_precoSaidaChave) return;
+  const v = document.getElementById("precoInput").value;
+  const val = v ? Number(v) : 0;
+  if (aplicarTodas && _precoSaidaNome) {
+    // Aplica o preço a todas as saídas com o mesmo nome do marceneiro atual
+    const m = getMarceneiro();
+    const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
+    mSaidas.forEach(s => {
+      if ((s.nome||"").toLowerCase().trim() === (_precoSaidaNome||"").toLowerCase().trim()) {
+        const ch = _chavePrecoSaida(m.id, s.nome, s.largura);
+        if (val > 0) saidaPrecos[ch] = val;
+        else delete saidaPrecos[ch];
+      }
+    });
+  } else {
+    if (val > 0) saidaPrecos[_precoSaidaChave] = val;
+    else delete saidaPrecos[_precoSaidaChave];
+  }
+  salvarSaidaPrecos();
+  fecharPrecoSaida();
+  renderSaidas();
+}
+
 function confirmarDelete(){
   pedirSenha(() => {
     if(window._deletandoMarc && deleteMarcId){
@@ -1095,54 +1257,13 @@ function confirmarDelete(){
 }
 
 
-// DRAG SAÍDAS
-let dragSaidaSrcId = null;
-function startSaidaDrag(e, id, el) {
-  dragSaidaSrcId = id; el.classList.add("dragging");
-  const h = el.getBoundingClientRect().height / 2;
-  const onMove = (ex, ey) => {
-    document.querySelectorAll("#saidasList .saida-item").forEach(r => r.classList.remove("drag-over"));
-    const t = getSaidaTarget(ey); if (t && t !== el) t.classList.add("drag-over");
-  };
-  const onEnd = (ey) => {
-    el.classList.remove("dragging");
-    document.querySelectorAll("#saidasList .saida-item").forEach(r => r.classList.remove("drag-over"));
-    window.removeEventListener("mousemove", mmH); window.removeEventListener("mouseup", muH);
-    window.removeEventListener("touchmove", tmH); window.removeEventListener("touchend", teH);
-    const t = getSaidaTarget(ey);
-    if (t && t.dataset.sid && t.dataset.sid !== String(dragSaidaSrcId)) reorderSaidas(dragSaidaSrcId, parseInt(t.dataset.sid));
-    dragSaidaSrcId = null;
-  };
-  const mmH = ev => onMove(ev.clientX, ev.clientY);
-  const muH = ev => onEnd(ev.clientY);
-  const tmH = ev => { ev.preventDefault(); onMove(ev.touches[0].clientX, ev.touches[0].clientY); };
-  const teH = ev => onEnd(ev.changedTouches[0].clientY);
-  window.addEventListener("mousemove", mmH); window.addEventListener("mouseup", muH);
-  window.addEventListener("touchmove", tmH, { passive: false }); window.addEventListener("touchend", teH);
-}
-function getSaidaTarget(y) {
-  for (const el of document.querySelectorAll("#saidasList .saida-item:not(.dragging)")) {
-    const r = el.getBoundingClientRect(); if (y >= r.top && y <= r.bottom) return el;
-  }
-  return null;
-}
-function reorderSaidas(srcId, tgtId) {
-  const m = getMarceneiro();
-  const mS = saidas.filter(s => s.marceneiroId === m.id);
-  const oS = saidas.filter(s => s.marceneiroId !== m.id);
-  const si = mS.findIndex(s => s.id === srcId), ti = mS.findIndex(s => s.id === tgtId);
-  if (si === -1 || ti === -1) return;
-  const [mv] = mS.splice(si, 1); mS.splice(ti, 0, mv);
-  saidas = [...oS, ...mS]; salvarSaidas(); renderSaidas();
-}
-
 // DRAG REORDER
 let dragSrcId=null;
 function startDrag(e,id,el){
   dragSrcId=id;el.classList.add("dragging");
   const ghost=document.getElementById("dragGhost");
   const item=items.find(i=>i.id===id);
-  document.getElementById("ghostNome").textContent=item.tipo||(item.categoria==="porta"?"Porta":"Janela");
+  document.getElementById("ghostNome").textContent=_nomeItemCategoria(item);
   document.getElementById("ghostMed").textContent=`${item.qtd} · ${item.largura}cm`;
   ghost.style.display="flex";
   const h=el.getBoundingClientRect().height/2;
@@ -1206,9 +1327,9 @@ document.getElementById("modalOverlay").addEventListener("click",e=>{if(e.target
 // FORM
 function irForm(tipo){
   tipoAtual=tipo;const m=getMarceneiro();
-  document.getElementById("formTitle").textContent=tipo==="porta"?"Nova Porta":"Nova Janela";
+  document.getElementById("formTitle").textContent=tipo==="porta"?"Nova Porta":(tipo==="janela"?"Nova Janela":"Novo Item");
   document.getElementById("formSub").innerHTML=`Marceneiro: <strong>${m?.nome}</strong>`;
-  document.getElementById("fTipo").placeholder=tipo==="porta"?"Ex: Almofadada, Lisa…":"Ex: Basculante, Guilhotina…";
+  document.getElementById("fTipo").placeholder=tipo==="porta"?"Ex: Almofadada, Lisa…":(tipo==="janela"?"Ex: Basculante, Guilhotina…":"Ex: Batente, Guarnição…");
   document.getElementById("fTipo").value="";
   for (let i = 1; i <= 6; i++){
     const sfx = i === 1 ? "" : String(i);
@@ -1259,7 +1380,8 @@ function salvar(){
   const btn=document.getElementById("btnSalvar");
   btn.textContent = linhas.length > 1 ? `✓ ${linhas.length} lançamentos salvos!` : "✓ Salvo!";
   btn.classList.add("done");
-  setTimeout(()=>{btn.textContent="Salvar Lançamento";btn.classList.remove("done");renderHistorico();renderHome();irView("tipo")},1200);
+  btn.style.background = "linear-gradient(135deg,#5a9e6e,#3a7a50)";
+  setTimeout(()=>{btn.textContent="Salvar Lançamento";btn.classList.remove("done");btn.style.background="linear-gradient(135deg,#3a7bd5,#2a5aa8)";renderHistorico();renderHome();irView("tipo")},1200);
 }
 
 
@@ -1274,12 +1396,18 @@ function flashCard(id) {
 // SAÍDAS
 let saidas = [];
 let saidasHistorico = [];
+let saidaPrecos = {};
 function carregarSaidas() {
   try { saidas = JSON.parse(localStorage.getItem("saidas")) || []; } catch { saidas = []; }
   try { saidasHistorico = JSON.parse(localStorage.getItem("saidasHistorico")) || []; } catch { saidasHistorico = []; }
+  try { saidaPrecos = JSON.parse(localStorage.getItem("saidaPrecos")) || {}; } catch { saidaPrecos = {}; }
 }
 function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush();atualizarBtnSaidas(); }
 function salvarSaidasHistorico() { localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico)); cloudPush(); }
+function salvarSaidaPrecos() { localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos)); cloudPush(); }
+function _chavePrecoSaida(marceneiroId, nome, largura) {
+  return String(marceneiroId) + "||" + (nome || "").toLowerCase().trim() + "||" + String(largura);
+}
 
 function atualizarBtnSaidas() {
   const btn = document.getElementById("btnSaidas");
@@ -1387,19 +1515,23 @@ function renderSaidas() {
     div.className = "saida-item";
     div.style.cssText = "display:flex;align-items:center;overflow:hidden";
     div.dataset.sid = s.id;
+    const chave = _chavePrecoSaida(m.id, s.nome, s.largura);
+    const preco = saidaPrecos[chave];
+    const precoLabel = (preco != null && preco > 0) ? `R$ ${Number(preco).toFixed(2).replace(".", ",")}` : "R$";
     div.innerHTML = `
       <div class="saida-top saida-tap" style="flex:1;padding:12px 0 12px 0">
         <div style="display:flex;align-items:center;gap:0;width:100%;flex-wrap:wrap">
-          <span style="font-size:18px;font-weight:900;flex-shrink:0;min-width:52px;display:inline-block;text-align:right">${s.qtd}</span>
+          <span style="font-size:18px;font-weight:900;flex-shrink:0">${s.qtd}</span>
           <span style="font-size:13px;font-weight:300;color:var(--text2);margin:0 4px;flex-shrink:0">|</span>
           <span style="font-size:18px;font-weight:900;color:var(--accent);flex-shrink:0">${s.largura}</span><span style="font-size:11px;font-weight:400;color:var(--accent);flex-shrink:0;margin-right:8px">cm</span>
           <span style="color:var(--text);font-weight:700;font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.nome}</span>
         </div>
       </div>
-      <div class="saida-handle" style="width:24px;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--border2);font-size:11px;border-left:1px solid var(--border);flex-shrink:0;touch-action:none;user-select:none;padding:0 2px">⋮⋮</div>`;
-    const sh = div.querySelector(".saida-handle");
-    sh.addEventListener("mousedown", e => startSaidaDrag(e, s.id, div));
-    sh.addEventListener("touchstart", e => { e.preventDefault(); startSaidaDrag(e.touches[0], s.id, div); }, { passive: false });
+      <button class="saida-preco-btn" style="background:transparent;border:none;border-left:1px solid var(--border);color:${preco?'#3a7bd5':'var(--text2)'};font-size:${preco?'12px':'11px'};font-weight:bold;cursor:pointer;flex-shrink:0;padding:0 10px;min-height:44px;font-family:Georgia,serif;white-space:nowrap">${precoLabel}</button>`;
+    div.querySelector(".saida-preco-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      abrirPrecoSaida(chave, s.nome, s.largura);
+    });
 
     // duplo-toque pra devolver portas ao estoque
     const tapArea = div.querySelector(".saida-tap");
@@ -1418,9 +1550,20 @@ function renderSaidas() {
 
   // Total geral
   const totalSaidas = agrupados.reduce((a,s) => a + Number(s.qtd), 0);
+  // Total R$ — soma de qtd × preço para itens com preço definido
+  const m2 = getMarceneiro();
+  let totalRS = 0;
+  agrupados.forEach(s => {
+    const ch = _chavePrecoSaida(m2.id, s.nome, s.largura);
+    const p = saidaPrecos[ch];
+    if (p && p > 0) totalRS += Number(s.qtd) * p;
+  });
   const totalDiv = document.createElement("div");
-  totalDiv.style.cssText = "display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:10px 4px 4px;border-top:1px solid var(--border);margin-top:4px";
-  totalDiv.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px">TOTAL</span><span style="display:inline-flex;align-items:baseline;gap:1px"><span style="font-size:24px;font-weight:900;color:var(--accent)">${totalSaidas}</span><span style="font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase">un</span></span>`;
+  totalDiv.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 4px 4px;border-top:1px solid var(--border);margin-top:4px";
+  const rsHtml = totalRS > 0
+    ? `<span style="display:inline-flex;align-items:baseline;gap:4px"><span style="font-size:13px;font-weight:700;color:var(--text2)">R$</span><span style="font-size:22px;font-weight:900;color:#3a7bd5">${totalRS.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})}</span></span>`
+    : "";
+  totalDiv.innerHTML = `<span style="display:inline-flex;align-items:baseline;gap:4px"><span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px">TOTAL</span><span style="font-size:24px;font-weight:900;color:var(--accent)">${totalSaidas}</span><span style="font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase">un</span></span>${rsHtml}`;
   list.appendChild(totalDiv);
 }
 
@@ -1470,17 +1613,17 @@ function confirmarDevolver(){
   saidas = saidas.filter(s => !idsRemover.includes(s.id));
 
   // Adicionar de volta ao estoque
-  const item = items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela")) && String(i.largura) === String(largura));
+  const item = items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela") || (i.categoria === "outro" && nome === "Outro")) && String(i.largura) === String(largura));
   if (item){
     item.qtd = Number(item.qtd) + val;
   } else {
     // Fallback: cria novo item no estoque (caso o original tenha sido deletado)
-    const cat = devolverAtual.categoria || (nome === "Janela" ? "janela" : "porta");
+    const cat = devolverAtual.categoria || (nome === "Janela" ? "janela" : (nome === "Outro" ? "outro" : "porta"));
     items.push({
       id: Date.now(),
       marceneiroId: marcId,
       categoria: cat,
-      tipo: (nome === "Porta" || nome === "Janela") ? "" : nome,
+      tipo: (nome === "Porta" || nome === "Janela" || nome === "Outro") ? "" : nome,
       largura: largura,
       qtd: val,
       data: new Date().toLocaleDateString("pt-BR")
@@ -1514,12 +1657,25 @@ function limparSaidas() {
   }, `Digite a senha para limpar as saídas de ${m.nome}`);
 }
 
+function limparPrecosSaidas() {
+  const m = getMarceneiro(); if (!m) return;
+  const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
+  if (!mSaidas.some(s => saidaPrecos[_chavePrecoSaida(m.id, s.nome, s.largura)])) return;
+  _pedirConfirmacao("Remover todos os preços das saídas atuais?", () => {
+    mSaidas.forEach(s => {
+      delete saidaPrecos[_chavePrecoSaida(m.id, s.nome, s.largura)];
+    });
+    salvarSaidaPrecos();
+    renderSaidas();
+  });
+}
+
 // MOVIMENTAÇÃO
 let moveId = null;
 function abrirMoveMenu(id) {
   moveId = id;
   const item = items.find(i => i.id === id);
-  const nome = item.tipo || (item.categoria === "porta" ? "Porta" : "Janela");
+  const nome = _nomeItemCategoria(item);
   document.getElementById("moveNome").textContent = nome + "  ·  " + item.largura + "cm";
   document.getElementById("moveSaldo").textContent = "Saldo atual: " + item.qtd;
   document.getElementById("moveQtd").value = "";
@@ -1584,7 +1740,7 @@ function _executarMove(sinal, val, idx) {
     document.getElementById("moveFeedback").style.color = "#e05050";
     document.getElementById("moveFeedback").textContent = `-${val} → Novo saldo: ${items[idx].qtd}`;
     // Registrar saída
-    const nomeItem = items[idx].tipo || (items[idx].categoria === "porta" ? "Porta" : "Janela");
+    const nomeItem = _nomeItemCategoria(items[idx]);
     registrarSaida(items[idx].marceneiroId, nomeItem, items[idx].largura, val, items[idx].categoria);
   }
   document.getElementById("moveSaldo").textContent = "Saldo atual: " + items[idx].qtd;
@@ -1705,7 +1861,7 @@ function exportarPDF() {
     doc.setFillColor(idx % 2 === 0 ? 252 : 245, idx % 2 === 0 ? 250 : 248, idx % 2 === 0 ? 244 : 238);
     doc.roundedRect(margin, y - 5, contentW, 14, 2, 2, "F");
 
-    const nome = item.tipo || (item.categoria === "porta" ? "Porta" : "Janela");
+    const nome = _nomeItemCategoria(item);
     const numCol = 42; // largura fixa da coluna de números
 
     // Números alinhados à direita dentro da coluna
@@ -1758,7 +1914,7 @@ function _blocoMonoEstoque(lista) {
   return lista.map(it => {
     const q = String(it.qtd);
     const pad = FIG.repeat(maxQtd - q.length);
-    const nome = it.tipo || (it.categoria === "porta" ? "Porta" : "Janela");
+    const nome = _nomeItemCategoria(it);
     return `${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nome}`;
   }).join("\n");
 }
@@ -1768,9 +1924,11 @@ function _montarTextoEstoque(m, itens, filtros) {
   const hoje = new Date().toLocaleDateString("pt-BR");
   const portas = _ordenarItensEstoque(itens.filter(i => i.categoria === "porta"));
   const janelas = _ordenarItensEstoque(itens.filter(i => i.categoria === "janela"));
+  const outros = _ordenarItensEstoque(itens.filter(i => i.categoria === "outro"));
   const totalP = portas.reduce((s,i) => s + Number(i.qtd), 0);
   const totalJ = janelas.reduce((s,i) => s + Number(i.qtd), 0);
-  const total = totalP + totalJ;
+  const totalO = outros.reduce((s,i) => s + Number(i.qtd), 0);
+  const total = totalP + totalJ + totalO;
 
   const linhas = [];
   linhas.push(`*🚪 ESTOQUE — ${m.nome.toUpperCase()}*`);
@@ -1787,6 +1945,11 @@ function _montarTextoEstoque(m, itens, filtros) {
     linhas.push("");
     linhas.push(`*🪟 JANELAS — ${totalJ} un*`);
     linhas.push(_blocoMonoEstoque(janelas));
+  }
+  if (outros.length) {
+    linhas.push("");
+    linhas.push(`*📦 OUTROS — ${totalO} un*`);
+    linhas.push(_blocoMonoEstoque(outros));
   }
   linhas.push("");
   linhas.push("_Estoque de portas JL_");
@@ -1839,7 +2002,31 @@ function _prepararBlocosSaidas(mSaidas, opts) {
   });
   if (blocoAtual.length) blocos.push({ especie: lastEspecie, sub: subAcc, itens: blocoAtual });
 
-  return { hoje, motorista, total, blocos };
+  // Monta linhas do resumo agrupando por espécie + preço unitário
+  const linhasResumo = [];
+  blocos.forEach(b => {
+    // Agrupa itens do bloco por preço unitário
+    const porPreco = {};
+    b.itens.forEach(it => {
+      const p = saidaPrecos[_chavePrecoSaida(it.marceneiroId, it.nome, it.largura)];
+      if (p == null || p <= 0) return;
+      const key = String(p);
+      if (!porPreco[key]) porPreco[key] = { precoUnit: p, qtd: 0 };
+      porPreco[key].qtd += Number(it.qtd);
+    });
+    Object.values(porPreco).sort((a,b) => b.precoUnit - a.precoUnit).forEach(g => {
+      linhasResumo.push({ qtd: g.qtd, precoUnit: g.precoUnit, totalRS: g.qtd * g.precoUnit, especie: b.especie });
+    });
+  });
+  const temPrecos = linhasResumo.length > 0;
+  const totalGeralRS = linhasResumo.reduce((s, l) => s + l.totalRS, 0);
+
+  return { hoje, motorista, total, blocos, temPrecos, totalGeralRS, linhasResumo };
+}
+function _fmtRS(n) {
+  n = Number(n);
+  const isInt = Math.abs(n - Math.round(n)) < 0.005;
+  return n.toLocaleString('pt-BR', isInt ? {minimumFractionDigits:0, maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 function _montarTextoSaidas(m, mSaidas, opts) {
   const { hoje, motorista, total, blocos } = _prepararBlocosSaidas(mSaidas, opts);
@@ -2038,15 +2225,26 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
 
   return canvas;
 }
-function compartilharPedidoPNG(cliente, dataEntrega) {
-  const itens = pedidos.filter(p => p.cliente === cliente && (p.dataEntrega || "") === (dataEntrega || ""));
-  if (!itens.length) return;
-  const canvas = _gerarCanvasPedido(cliente, dataEntrega, itens);
+// Evita que dois compartilhamentos (PNG/texto) sejam disparados ao mesmo
+// tempo — o toBlob() do PNG é assíncrono e, se o usuário tocar em outro
+// botão antes dele terminar, dois navigator.share() concorrentes geram
+// comportamento imprevisível (ex: enviar a imagem no lugar do texto).
+let _shareEmAndamento = false;
+
+function _compartilharPNG(canvas, fileName, btnEl, shareTitle) {
+  if (_shareEmAndamento) return;
+  _shareEmAndamento = true;
+  const txtOriginal = btnEl ? btnEl.textContent : null;
+  if (btnEl) { btnEl.textContent = "⏳"; btnEl.disabled = true; }
+  const finalizar = () => {
+    _shareEmAndamento = false;
+    if (btnEl) { btnEl.textContent = txtOriginal; btnEl.disabled = false; }
+  };
   canvas.toBlob(blob => {
-    const fileName = `Pedido_${cliente.replace(/ /g,'_')}.png`;
+    if (!blob) { finalizar(); return; }
     const file = new File([blob], fileName, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: 'Pedido' }).catch(() => {});
+      navigator.share({ files: [file], title: shareTitle || 'Imagem' }).catch(() => {}).then(finalizar, finalizar);
     } else {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2055,24 +2253,38 @@ function compartilharPedidoPNG(cliente, dataEntrega) {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      finalizar();
     }
   }, 'image/png');
 }
 
+function compartilharPedidoPNG(cliente, dataEntrega, btnEl) {
+  const itens = pedidos.filter(p => p.cliente === cliente && (p.dataEntrega || "") === (dataEntrega || ""));
+  if (!itens.length) return;
+  const canvas = _gerarCanvasPedido(cliente, dataEntrega, itens);
+  _compartilharPNG(canvas, `Pedido_${cliente.replace(/ /g,'_')}.png`, btnEl, 'Pedido');
+}
+
 async function _enviarTexto(texto) {
-  // Tenta o compartilhamento nativo (mobile abre lista com WhatsApp)
-  if (navigator.share) {
-    try {
-      await navigator.share({ text: texto });
-      return;
-    } catch (e) {
-      if (e.name === "AbortError") return; // usuário cancelou
-      // outros erros caem para fallback
+  if (_shareEmAndamento) return;
+  _shareEmAndamento = true;
+  try {
+    // Tenta o compartilhamento nativo (mobile abre lista com WhatsApp)
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: texto });
+        return;
+      } catch (e) {
+        if (e.name === "AbortError") return; // usuário cancelou
+        // outros erros caem para fallback
+      }
     }
+    // Fallback: abre o WhatsApp direto com o texto pronto
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, "_blank");
+  } finally {
+    _shareEmAndamento = false;
   }
-  // Fallback: abre o WhatsApp direto com o texto pronto
-  const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
-  window.open(url, "_blank");
 }
 
 function compartilharEstoqueTexto() {
@@ -2096,11 +2308,16 @@ function compartilharSaidasTexto() {
 
 // PNG das saídas (mesmo conteúdo do texto, em imagem)
 function _gerarCanvasSaidas(m, mSaidas, opts) {
-  const { hoje, motorista, total, blocos } = _prepararBlocosSaidas(mSaidas, opts);
+  const { hoje, motorista, total, blocos, temPrecos, totalGeralRS, linhasResumo } = _prepararBlocosSaidas(mSaidas, opts);
   const W = 1500, MGEM = 48, ROW_H = 86, SUB_H = 72, GAP = 20, HEADER_H = 215, FOOTER_H = 120;
+  const PRECO_ROW_H = 86, PRECO_TOTAL_H = 110, PRECO_TOP_GAP = 80;
 
   let bodyH = 0;
   blocos.forEach(b => { bodyH += b.itens.length * ROW_H + SUB_H + GAP; });
+  if (temPrecos) {
+    const nLinhasPreco = linhasResumo.length;
+    bodyH += PRECO_TOP_GAP + 50 + nLinhasPreco * PRECO_ROW_H + PRECO_TOTAL_H;
+  }
   const H = HEADER_H + bodyH + FOOTER_H;
 
   const canvas = document.createElement('canvas');
@@ -2137,9 +2354,9 @@ function _gerarCanvasSaidas(m, mSaidas, opts) {
   ctx.stroke();
 
   let y = HEADER_H + 37;
-  const COL_QTD_RIGHT = MGEM + 142;
-  const COL_LARG = COL_QTD_RIGHT + 40;
-  const COL_NOME = COL_LARG + 200;
+  const COL_QTD_RIGHT = MGEM + 100;
+  const COL_LARG = COL_QTD_RIGHT + 30;
+  const COL_NOME = COL_LARG + 190;
 
   blocos.forEach(b => {
     b.itens.forEach(it => {
@@ -2173,6 +2390,79 @@ function _gerarCanvasSaidas(m, mSaidas, opts) {
     y += SUB_H + GAP;
   });
 
+  if (temPrecos) {
+    ctx.strokeStyle = '#cccccc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(MGEM, y - GAP/2);
+    ctx.lineTo(W - MGEM, y - GAP/2);
+    ctx.stroke();
+    y += PRECO_TOP_GAP - GAP/2;
+
+    // Mede larguras das 3 colunas
+    ctx.font = 'bold 52px monospace';
+    let maxQtdW = 0, maxPrcW = 0, maxRsW = 0;
+    linhasResumo.forEach(l => {
+      maxQtdW = Math.max(maxQtdW, ctx.measureText(String(l.qtd)).width);
+      maxPrcW = Math.max(maxPrcW, ctx.measureText(_fmtRS(l.precoUnit)).width);
+      maxRsW  = Math.max(maxRsW,  ctx.measureText(_fmtRS(l.totalRS)).width);
+    });
+    ctx.font = 'bold 58px monospace';
+    maxRsW = Math.max(maxRsW, ctx.measureText(_fmtRS(totalGeralRS)).width);
+    ctx.font = 'bold 52px monospace';
+
+    const GAP_COL = 48;
+    const COL_QTD_R  = MGEM + maxQtdW;
+    const COL_X      = COL_QTD_R + 24;
+    const COL_PRC_R  = COL_X + 28 + maxPrcW;
+    const COL_RS_R   = COL_PRC_R + GAP_COL + maxRsW;
+    const COL_ESP    = COL_RS_R + 32;
+
+    // Cabeçalho
+    ctx.font = 'bold 42px monospace';
+    ctx.fillStyle = '#3a7bd5';
+    ctx.textAlign = 'right';
+    ctx.fillText('Qtd', COL_QTD_R, y);
+    ctx.fillText('prç', COL_PRC_R, y);
+    ctx.fillText('R$', COL_RS_R, y);
+    y += 76;
+
+    linhasResumo.forEach(l => {
+      ctx.font = 'bold 52px monospace';
+      ctx.fillStyle = '#1a1610';
+
+      ctx.textAlign = 'right';
+      ctx.fillText(String(l.qtd), COL_QTD_R, y);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#999999';
+      ctx.fillText('x', COL_X, y);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#1a1610';
+      ctx.fillText(_fmtRS(l.precoUnit), COL_PRC_R, y);
+
+      ctx.fillStyle = '#2a9a50';
+      ctx.fillText(_fmtRS(l.totalRS), COL_RS_R, y);
+
+      ctx.font = '44px monospace';
+      ctx.fillStyle = '#1a1610';
+      ctx.textAlign = 'left';
+      ctx.fillText(`•  ${l.especie}`, COL_ESP, y);
+
+      y += PRECO_ROW_H;
+    });
+
+    y += PRECO_TOTAL_H - PRECO_ROW_H/2;
+    ctx.font = 'bold 58px monospace';
+    ctx.fillStyle = '#2a9a50';
+    ctx.textAlign = 'right';
+    ctx.fillText(_fmtRS(totalGeralRS), COL_RS_R, y);
+    ctx.textAlign = 'left';
+    ctx.fillText('  R$ TOTAL', COL_RS_R, y);
+    ctx.fillStyle = '#1a1610';
+  }
+
   ctx.font = 'bold 38px monospace';
   ctx.fillStyle = '#a07840';
   ctx.textAlign = 'center';
@@ -2180,27 +2470,13 @@ function _gerarCanvasSaidas(m, mSaidas, opts) {
 
   return canvas;
 }
-function compartilharSaidasPNG() {
+function compartilharSaidasPNG(btnEl) {
   const m = getMarceneiro();
   if (!m) return;
   const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
   if (!mSaidas.length) { alert("Nenhuma saída registrada."); return; }
   const canvas = _gerarCanvasSaidas(m, mSaidas);
-  canvas.toBlob(blob => {
-    const fileName = `Saidas_${m.nome.replace(/ /g,'_')}.png`;
-    const file = new File([blob], fileName, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: 'Saídas' }).catch(() => {});
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-  }, 'image/png');
+  _compartilharPNG(canvas, `Saidas_${m.nome.replace(/ /g,'_')}.png`, btnEl, 'Saídas');
 }
 
 // HISTÓRICO DE SAÍDAS
@@ -2237,7 +2513,7 @@ function renderSaidasHistList() {
         <div id="saidasHistBody${h.id}" class="saidas-hist-body" style="display:none">
           <div class="saidas-hist-itens">${itensHtml}</div>
           <div class="saidas-hist-acoes">
-            <button onclick="reenviarSaidasHistPNG(${h.id})" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2)">🖼️</button>
+            <button onclick="reenviarSaidasHistPNG(${h.id}, this)" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2)">🖼️</button>
             <button onclick="reenviarSaidasHistTexto(${h.id})" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366">💬</button>
             <button onclick="excluirSaidasHist(${h.id})" title="Excluir" style="background:transparent;border:1px solid #e0505044;color:#e05050">🗑️</button>
           </div>
@@ -2251,27 +2527,13 @@ function toggleSaidasHistCard(id) {
   if (!el) return;
   el.style.display = el.style.display === "none" ? "block" : "none";
 }
-function reenviarSaidasHistPNG(id) {
+function reenviarSaidasHistPNG(id, btnEl) {
   const h = saidasHistorico.find(x => x.id === id);
   if (!h) return;
   const m = { nome: h.marceneiroNome };
   const mSaidas = h.itens.map(i => ({ ...i, qtd: Number(i.qtd) }));
   const canvas = _gerarCanvasSaidas(m, mSaidas, { motorista: h.motorista || "", hoje: h.data });
-  canvas.toBlob(blob => {
-    const fileName = `Saidas_${h.marceneiroNome.replace(/ /g,'_')}.png`;
-    const file = new File([blob], fileName, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: 'Saídas' }).catch(() => {});
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-  }, 'image/png');
+  _compartilharPNG(canvas, `Saidas_${h.marceneiroNome.replace(/ /g,'_')}.png`, btnEl, 'Saídas');
 }
 function reenviarSaidasHistTexto(id) {
   const h = saidasHistorico.find(x => x.id === id);
@@ -2380,6 +2642,7 @@ function renderLembreteList() {
         <span class="lembrete-item-txt" onclick="tapLembrete(${i})" style="cursor:pointer;user-select:none;-webkit-user-select:none;display:block">${l.txt}</span>
         ${saldoHtml}
       </div>
+      <button class="lembrete-item-send" onclick="event.stopPropagation();enviarLembreteTexto(${i})" title="Enviar por WhatsApp">💬</button>
       <button class="lembrete-item-del" onclick="deletarLembrete(${i})">🗑</button>
     </div>`;
   }).join('');
@@ -2640,6 +2903,12 @@ function adicionarLembrete() {
   salvarDados(); renderLembreteList(); renderHome();
   document.getElementById("novoLembreteForm").style.display = "none";
 }
+function enviarLembreteTexto(idx) {
+  const lista = lembretes[lembreteIdAtual] || [];
+  const l = lista[idx];
+  if (!l) return;
+  _enviarTexto(l.txt);
+}
 function deletarLembrete(idx) {
   pedirSenha(() => {
     lembretes[lembreteIdAtual].splice(idx, 1);
@@ -2657,7 +2926,49 @@ function fecharLembrete() {
 
 // ============ PEDIDOS ============
 let editandoPedidoGroup = null; // {cliente, dataEntrega} do card em edição
-const LARGURAS_PADRAO_PEDIDO = ["120","100","90","80","70","60"];
+function ativarModoItensPedido() {
+  document.getElementById("pedFormCamposExtra").style.display = "none";
+  document.getElementById("wrapVoltarItensPedido").style.display = "flex";
+  const ta = document.getElementById("pedItens");
+  ta.style.minHeight = "30vh";
+}
+function desativarModoItensPedido() {
+  document.getElementById("pedFormCamposExtra").style.display = "block";
+  document.getElementById("wrapVoltarItensPedido").style.display = "none";
+  const ta = document.getElementById("pedItens");
+  ta.style.minHeight = "180px";
+}
+function inserirLarguraPedido(largura) {
+  const ta = document.getElementById("pedItens");
+  const value = ta.value;
+  const cursor = (typeof ta.selectionStart === "number") ? ta.selectionStart : value.length;
+  const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
+  let lineEnd = value.indexOf("\n", cursor);
+  if (lineEnd === -1) lineEnd = value.length;
+  const line = value.substring(lineStart, lineEnd);
+  const trimmed = line.trim();
+
+  let novaLinha, novoValor, novoCursor;
+  if (!trimmed) {
+    // Linha vazia: começa uma nova entrada
+    novaLinha = ` | ${largura}cm  `;
+    novoValor = value.slice(0, lineStart) + novaLinha + value.slice(lineEnd);
+    novoCursor = lineStart + novaLinha.length;
+  } else if (trimmed.includes("|")) {
+    // Linha já tem largura: começa uma nova linha abaixo
+    novaLinha = ` | ${largura}cm  `;
+    novoValor = value.slice(0, lineEnd) + "\n" + novaLinha + value.slice(lineEnd);
+    novoCursor = lineEnd + 1 + novaLinha.length;
+  } else {
+    // Linha tem a quantidade digitada: adiciona a largura depois dela
+    novaLinha = line.replace(/\s+$/, "") + ` | ${largura}cm  `;
+    novoValor = value.slice(0, lineStart) + novaLinha + value.slice(lineEnd);
+    novoCursor = lineStart + novaLinha.length;
+  }
+  ta.value = novoValor;
+  ta.focus();
+  ta.setSelectionRange(novoCursor, novoCursor);
+}
 function toggleFormPedido() {
   const card = document.getElementById("pedidoFormCard");
   if (card.style.display === "none") {
@@ -2666,6 +2977,7 @@ function toggleFormPedido() {
     card.style.display = "none";
     editandoPedidoGroup = null;
     document.querySelector("#pedidoFormCard .btn-save").textContent = "Salvar Pedido";
+    desativarModoItensPedido();
   }
 }
 
@@ -2705,37 +3017,9 @@ function editarPedidoCard() {
   document.getElementById("pedCliente").value = cliente;
   document.getElementById("pedDataEntrega").value = dataEntrega;
   document.getElementById("pedTipo").value = "";
-  for (let i = 1; i <= 6; i++) {
-    const sfx = i === 1 ? "" : String(i);
-    document.getElementById("pedQtd"+sfx).value = "";
-    document.getElementById("pedLarg"+sfx).value = LARGURAS_PADRAO_PEDIDO[i-1];
-    document.getElementById("pedNome"+sfx).value = "";
-  }
-
-  const usedRows = new Set();
-  const handled = new Set();
-  itens.forEach((p, idx) => {
-    const row = LARGURAS_PADRAO_PEDIDO.indexOf(String(p.largura));
-    if (row !== -1 && !usedRows.has(row)) {
-      usedRows.add(row); handled.add(idx);
-      const sfx = row === 0 ? "" : String(row+1);
-      document.getElementById("pedQtd"+sfx).value = p.qtd;
-      document.getElementById("pedNome"+sfx).value = p.tipo || "";
-    }
-  });
-  itens.forEach((p, idx) => {
-    if (handled.has(idx)) return;
-    for (let r = 0; r < 6; r++) {
-      if (!usedRows.has(r)) {
-        usedRows.add(r);
-        const sfx = r === 0 ? "" : String(r+1);
-        document.getElementById("pedQtd"+sfx).value = p.qtd;
-        document.getElementById("pedLarg"+sfx).value = p.largura;
-        document.getElementById("pedNome"+sfx).value = p.tipo || "";
-        break;
-      }
-    }
-  });
+  document.getElementById("pedItens").value = itens
+    .map(p => `${p.qtd} | ${p.largura}cm  ${p.tipo || ""}`.trimEnd())
+    .join("\n");
 
   editandoPedidoGroup = { cliente, dataEntrega };
   document.getElementById("pedidoFormCard").style.display = "block";
@@ -2798,7 +3082,7 @@ function renderPedidos() {
     const zapBtn = card.querySelector(".btn-zap-pedido");
     const pngBtn = card.querySelector(".btn-png-pedido");
     zapBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoTexto(g.cliente, g.dataEntrega); });
-    pngBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoPNG(g.cliente, g.dataEntrega); });
+    pngBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoPNG(g.cliente, g.dataEntrega, pngBtn); });
     const labelMenu = g.cliente + (dataFmt ? "  ·  Entrega: " + dataFmt : "");
     let lastTapCard = 0;
     header.addEventListener("touchend", e => {
@@ -2842,21 +3126,23 @@ function adicionarPedido() {
   const agora = Date.now();
   const dataStr = new Date().toLocaleDateString("pt-BR");
   let count = 0;
-  for (let i = 1; i <= 6; i++){
-    const sfx = i === 1 ? "" : String(i);
-    const qEl = document.getElementById("pedQtd"+sfx);
-    const lEl = document.getElementById("pedLarg"+sfx);
-    const nEl = document.getElementById("pedNome"+sfx);
-    const qtd = Number(qEl.value);
-    const largura = lEl.value;
-    const nomeLinha = nEl.value.trim();
+  const linhas = document.getElementById("pedItens").value.split("\n");
+  linhas.forEach(linha => {
+    const m = linha.match(/^\s*(\d+)\s*\|\s*(\d+)\s*(?:cm)?\s*(.*)$/i);
+    if (!m) return;
+    const qtd = Number(m[1]);
+    const largura = m[2];
+    const nomeLinha = (m[3] || "").trim();
     if (qtd > 0 && largura) {
-      pedidos.push({ id: agora + count, cliente, tipo: nomeLinha || tipo, qtd, largura, data: dataStr, dataEntrega });
+      // Ao editar, se o campo "Tipo / Modelo" estiver preenchido, ele vale
+      // para todos os itens (renomear em lote). Em pedidos novos, o nome
+      // de cada linha tem prioridade e "Tipo / Modelo" é só um fallback.
+      const nomeFinal = (editandoPedidoGroup && tipo) ? tipo : (nomeLinha || tipo);
+      pedidos.push({ id: agora + count, cliente, tipo: nomeFinal, qtd, largura, data: dataStr, dataEntrega });
       count++;
     }
-    qEl.value = "";
-    nEl.value = "";
-  }
+  });
+  document.getElementById("pedItens").value = "";
   if (!count && !editandoPedidoGroup) return;
   document.getElementById("pedCliente").value = "";
   document.getElementById("pedTipo").value = "";
@@ -2878,6 +3164,7 @@ let cloudUnsub = null;
 let cloudReady = false;
 let cloudApplyingRemote = false;     // evita loop quando aplicamos dados vindos do snapshot
 let cloudPushTimer = null;
+let cloudPushPending = false;
 let qrScanner = null;
 
 function setSyncStatus(state){
@@ -2898,17 +3185,20 @@ function cloudPush(){
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
   setSyncStatus("syncing");
   clearTimeout(cloudPushTimer);
+  cloudPushPending = true;
   cloudPushTimer = setTimeout(async () => {
     try {
       const { db, doc, setDoc, serverTimestamp } = window.fb;
       await setDoc(doc(db, "estoques", workspaceId), {
-        marceneiros, items, lembretes, saidas, pedidos, saidasHistorico,
+        marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos,
         updatedAt: serverTimestamp()
       }, { merge: true });
       setSyncStatus("online");
     } catch (e) {
       console.error("Erro ao salvar na nuvem:", e);
       setSyncStatus("error");
+    } finally {
+      cloudPushPending = false;
     }
   }, 400);
 }
@@ -2921,6 +3211,7 @@ function cloudSubscribe(){
   setSyncStatus("syncing");
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
+    if (cloudPushPending || cloudPushTimer) { setSyncStatus("online"); return; }
     const data = snap.data();
     cloudApplyingRemote = true;
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
@@ -2929,6 +3220,7 @@ function cloudSubscribe(){
     if (Array.isArray(data.saidas))      saidas      = data.saidas;
     if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
     if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
+    if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
     // cache local
     localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
     localStorage.setItem("items",       JSON.stringify(items));
@@ -2936,11 +3228,13 @@ function cloudSubscribe(){
     localStorage.setItem("saidas",      JSON.stringify(saidas));
     localStorage.setItem("pedidos",     JSON.stringify(pedidos));
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
+    localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
     cloudApplyingRemote = false;
     setSyncStatus("online");
     // re-render do que estiver visível
     try { if (viewAtual === "home") renderHome(); else if (viewAtual === "historico") renderHistorico(); else if (viewAtual === "pedidos") renderPedidos(); } catch(e){}
     atualizarBtnSaidas();
+    atualizarBtnPedidos();
   }, (err) => {
     console.error("Erro snapshot:", err); setSyncStatus("error");
   });
@@ -2957,12 +3251,12 @@ function fecharSetup(){ document.getElementById("setupOverlay").classList.remove
 
 async function setupCriarEstoque(){
   // cria estoque vazio
-  await criarWorkspace({ marceneiros: [{id:1,nome:"Carlos Silva"},{id:2,nome:"João Pereira"},{id:3,nome:"Marcos Oliveira"}], items: [], lembretes: {}, saidas: [], pedidos: [], saidasHistorico: [] });
+  await criarWorkspace({ marceneiros: [{id:1,nome:"Carlos Silva"},{id:2,nome:"João Pereira"},{id:3,nome:"Marcos Oliveira"}], items: [], lembretes: {}, saidas: [], pedidos: [], saidasHistorico: [], saidaPrecos: {} });
 }
 
 async function setupMigrarLocal(){
   // cria estoque usando dados locais existentes
-  await criarWorkspace({ marceneiros, items, lembretes, saidas, pedidos, saidasHistorico });
+  await criarWorkspace({ marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos });
 }
 
 async function criarWorkspace(estadoInicial){
@@ -2979,12 +3273,14 @@ async function criarWorkspace(estadoInicial){
     lembretes = estadoInicial.lembretes;     saidas = estadoInicial.saidas;
     pedidos = estadoInicial.pedidos || [];
     saidasHistorico = estadoInicial.saidasHistorico || [];
+    saidaPrecos = estadoInicial.saidaPrecos || {};
     localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
     localStorage.setItem("items",       JSON.stringify(items));
     localStorage.setItem("lembretes",   JSON.stringify(lembretes));
     localStorage.setItem("saidas",      JSON.stringify(saidas));
     localStorage.setItem("pedidos",     JSON.stringify(pedidos));
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
+    localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
     fecharSetup();
     abrirQRCode(codigo, true);
     cloudSubscribe();
@@ -3079,7 +3375,7 @@ window.addEventListener("fb-ready", () => {
   if (workspaceId){
     cloudReady = true;
     // carrega cache local primeiro (render instantâneo), depois assina nuvem
-    carregarDados(); carregarSaidas(); renderHome();
+    carregarDados(); carregarSaidas(); renderHome(); atualizarBtnPedidos();
     cloudSubscribe();
   } else {
     mostrarSetup();
@@ -3089,7 +3385,7 @@ window.addEventListener("fb-ready", () => {
 // Fallback: se o Firebase não estiver disponível, abre o app no modo local
 setTimeout(() => {
   if (!window.fb){
-    if (workspaceId){ carregarDados(); carregarSaidas(); renderHome(); setSyncStatus("offline"); }
+    if (workspaceId){ carregarDados(); carregarSaidas(); renderHome(); atualizarBtnPedidos(); setSyncStatus("offline"); }
     else { mostrarSetup(); }
   }
 }, 3000);
