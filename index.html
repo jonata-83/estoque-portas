@@ -71,7 +71,7 @@
   .add-card.show{display:flex}
   .input-inline{background:var(--input-bg);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-size:15px;flex:1;min-width:160px;font-family:Georgia,serif;outline:none}
   .btn-confirm{background:var(--accent);color:#1a1610;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:bold;font-family:Georgia,serif}
-  .btn-cancel{background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;cursor:pointer;font-family:Georgia,serif}
+  .btn-cancel{background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;cursor:pointer;font-family:Georgia,serif;font-weight:bold}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
   .card{border:1px solid;border-radius:16px;padding:18px;cursor:pointer;transition:transform .15s,box-shadow .15s}
   .card:hover{transform:translateY(-3px);box-shadow:0 8px 24px #00000040}
@@ -133,7 +133,7 @@
   .delete-label{font-size:13px;color:var(--text2);text-align:center;margin-bottom:4px}
   .delete-nome{font-size:17px;color:var(--text);text-align:center;font-weight:bold;margin-bottom:8px}
   .btn-excluir{background:#e05050;color:#fff;border:none;border-radius:12px;padding:16px;font-size:17px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
-  .btn-cancelar-del{background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
+  .btn-cancelar-del{background:transparent;color:var(--text);border:2px solid var(--border2);border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif}
   #deleteOverlay{position:fixed;inset:0;z-index:299;display:none;background:#00000055}
   #deleteOverlay.show{display:block}
 
@@ -363,8 +363,14 @@
     <button id="btnPedidos" onclick="irView('pedidos')" title="Pedidos" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:10px 18px;cursor:pointer;font-size:16px;font-family:Georgia,serif;font-weight:bold;flex-shrink:0;display:inline-flex;align-items:center;gap:8px">Pedidos <span id="pedidosBadge" style="display:none;background:#1a1610;color:#ffb84d;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:bold"></span></button>
     <button id="btnTema" onclick="toggleTemaPanel(event)">⚙️</button>
     <button id="btnSaidas" onclick="abrirSaidas()" title="Ver Saídas" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📤</button>
-    <button id="btnPDF" onclick="exportarPDF()" title="Exportar PDF" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📄</button>
-    <button id="btnZap" onclick="compartilharEstoqueTexto()" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">💬</button>
+    <button id="btnReserva" onclick="abrirReserva()" title="Reservas" style="background:transparent;border:1px solid #c8a96e44;color:#c8a96e;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">🔖</button>
+    <div id="btnExportarWrap" style="position:relative;display:none;flex-shrink:0">
+      <button id="btnExportar" onclick="toggleExportarMenu(event)" title="Exportar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px">📋</button>
+      <div id="exportarMenu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;z-index:200;min-width:140px;box-shadow:0 4px 16px #0006;flex-direction:column;gap:4px">
+        <button onclick="exportarPDF();fecharExportarMenu()" style="background:transparent;border:none;color:var(--text);padding:10px 14px;cursor:pointer;font-size:14px;font-family:Georgia,serif;text-align:left;border-radius:8px;width:100%">📄 PDF</button>
+        <button onclick="compartilharEstoqueTexto();fecharExportarMenu()" style="background:transparent;border:none;color:#25D366;padding:10px 14px;cursor:pointer;font-size:14px;font-family:Georgia,serif;text-align:left;border-radius:8px;width:100%">💬 WhatsApp</button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -386,7 +392,10 @@
   <div id="lembreteNomeLabel">🔔 LEMBRETES</div>
   <div id="lembreteList"></div>
   <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);padding-top:12px">
-    <button type="button" class="btn-add-lembrete" onclick="toggleNovoLembreteForm()">＋ Novo Lembrete</button>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end">
+      <button type="button" id="btnToggleLembrete" onclick="toggleNovoLembreteForm()" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:50%;width:44px;height:44px;font-size:26px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;box-shadow:0 4px 14px #3a7bd566">＋</button>
+      <button id="btnSairLembrete" onclick="fecharLembrete()" style="background:transparent;border:1px solid var(--border2);color:var(--text);border-radius:50%;width:44px;height:44px;font-size:20px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0">✕</button>
+    </div>
     <div id="novoLembreteForm" style="display:none;flex-direction:column;gap:8px">
       <div style="display:flex;gap:8px">
         <button type="button" onclick="lembreteSinal('-')" title="Inserir VALE (saída)" style="flex:1;background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:8px;padding:6px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;line-height:1;touch-action:manipulation">−</button>
@@ -398,7 +407,6 @@
       <button class="btn-add-lembrete" onclick="adicionarLembrete()">＋ Adicionar</button>
     </div>
   </div>
-  <button class="btn-fechar-lembrete" onclick="fecharLembrete()">Fechar</button>
 </div>
 
 <!-- MENU EXCLUIR (bottom sheet) -->
@@ -421,7 +429,7 @@
   <input type="number" id="devolverQtd" inputmode="numeric" placeholder="Quantas devolver?" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:16px;color:var(--text);font-size:22px;font-family:Georgia,serif;outline:none;text-align:center;font-weight:bold" oninput="this.style.borderColor='var(--border2)'" />
   <div id="devolverFeedback" style="font-size:13px;text-align:center;min-height:18px;color:var(--danger);font-weight:bold"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button onclick="fecharDevolver()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="fecharDevolver()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
     <button onclick="confirmarDevolver()" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">↩ Devolver</button>
   </div>
 </div>
@@ -434,9 +442,9 @@
     <div style="font-size:11px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase">Saídas pendentes na caixa</div>
     <div id="novoCarrInfo" style="font-size:15px;color:var(--text);margin-top:10px;line-height:1.4"></div>
   </div>
-  <button onclick="novoCarrIniciar()" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;margin-top:4px">🆕 Iniciar novo carregamento</button>
-  <button onclick="novoCarrAdicionar()" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">➕ Adicionar ao carregamento atual</button>
-  <button onclick="fecharNovoCarr()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+  <button id="novoCarrBtnIniciar" onclick="novoCarrIniciar()" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;margin-top:4px">🆕 Iniciar novo carregamento</button>
+  <button id="novoCarrBtnAdicionar" onclick="novoCarrAdicionar()" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">➕ Adicionar ao carregamento atual</button>
+  <button onclick="fecharNovoCarr()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
 </div>
 
 <!-- SENHA PARA EXCLUSÃO (bottom sheet) -->
@@ -450,7 +458,7 @@
   <input type="password" id="senhaInput" inputmode="numeric" autocomplete="off" placeholder="Senha" maxlength="20" onkeydown="if(event.key==='Enter')confirmarSenha()" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:16px;color:var(--text);font-size:22px;font-family:Georgia,serif;outline:none;text-align:center;font-weight:bold;letter-spacing:8px" />
   <div id="senhaErr" style="font-size:13px;text-align:center;min-height:18px;color:var(--danger);font-weight:bold"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button onclick="fecharSenha()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="fecharSenha()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
     <button onclick="confirmarSenha()" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Confirmar</button>
   </div>
 </div>
@@ -467,8 +475,25 @@
   <button id="precoAplicarTodas" onclick="confirmarPrecoSaida(true)" style="background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:12px;padding:12px;font-size:14px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;display:none">Aplicar este preço a todas as portas com este nome</button>
   <button id="precoApagarBtn" onclick="apagarPrecoIndividual()" style="background:transparent;color:#e05050;border:1px solid #e0505044;border-radius:12px;padding:12px;font-size:14px;cursor:pointer;font-family:Georgia,serif;display:none">🗑 Apagar preço</button>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button onclick="fecharPrecoSaida()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="fecharPrecoSaida()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
     <button onclick="confirmarPrecoSaida(false)" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Salvar</button>
+  </div>
+</div>
+
+<!-- NOME CLIENTE RESERVA -->
+<div id="reservaNomeOverlay" style="position:fixed;inset:0;z-index:499;display:none;background:#00000077"></div>
+<div id="reservaNomePanel" style="position:fixed;inset:0;z-index:500;background:var(--bg2);display:none;flex-direction:column">
+  <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:18px;font-weight:bold;color:#c8a96e;font-family:Georgia,serif">🔖 Reservar</div>
+      <div id="reservaNomeProduto" style="font-size:13px;color:var(--text2);margin-top:2px"></div>
+    </div>
+    <button onclick="fecharNomeReserva()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:20px;border-radius:8px;padding:2px 12px;cursor:pointer;font-weight:bold">✕</button>
+  </div>
+  <div id="reservaClienteList" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px"></div>
+  <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px">
+    <input type="text" id="reservaNomeInput" placeholder="Novo cliente…" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarNomeReserva()" style="flex:1;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:13px 16px;color:var(--text);font-size:16px;font-family:Georgia,serif;outline:none"/>
+    <button onclick="confirmarNomeReserva()" style="background:linear-gradient(135deg,#b8943e,#8a6a20);color:#fff;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;flex-shrink:0">Reservar</button>
   </div>
 </div>
 
@@ -477,7 +502,7 @@
 <div id="confirmBox" style="position:fixed;z-index:601;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.9);display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:24px 20px 20px;width:min(340px,90vw);flex-direction:column;gap:16px;box-shadow:0 8px 40px #00000099;transition:transform .15s ease,opacity .15s ease;opacity:0">
   <div id="confirmMsg" style="font-size:15px;color:var(--text);text-align:center;line-height:1.5"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button onclick="_confirmarNao()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+    <button onclick="_confirmarNao()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
     <button id="confirmOkBtn" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Confirmar</button>
   </div>
 </div>
@@ -506,6 +531,26 @@
   </div>
 </div>
 
+<!-- PAINEL DE RESERVAS -->
+<div id="reservaOverlay" onclick="fecharReserva()" style="position:fixed;inset:0;z-index:299;display:none;background:#00000066"></div>
+<div id="reservaPanel" style="position:fixed;top:0;right:-100%;width:100%;max-width:420px;height:100%;z-index:300;background:var(--bg2);border-left:1px solid var(--border2);display:flex;flex-direction:column;transition:right .3s ease;box-shadow:-8px 0 32px #00000060">
+  <div class="saidas-header">
+    <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden">
+      <span style="font-size:13px;color:#c8a96e;font-weight:bold;white-space:nowrap">🔖 Reserva</span>
+      <span id="reservaNomeLabel" style="font-size:13px;color:var(--text);font-weight:bold;white-space:nowrap"></span>
+    </div>
+    <button onclick="fecharReserva()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:20px;cursor:pointer;padding:2px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;line-height:1;font-weight:bold">✕</button>
+  </div>
+  <div style="padding:6px 14px 0;border-bottom:1px solid var(--border)">
+    <input id="inputReservaCliente" placeholder="Cliente / Observação…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:6px 4px;color:var(--text);font-size:13px;font-family:Georgia,serif;outline:none;margin-bottom:6px"/>
+  </div>
+  <div class="saidas-list" id="reservaList"></div>
+  <div class="saidas-footer">
+    <button class="btn-clear-saidas" style="flex:1" onclick="limparReservas()">Limpar</button>
+    <button onclick="compartilharReservaTexto()" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:10px;padding:13px 16px;font-size:22px;cursor:pointer;flex-shrink:0">💬</button>
+  </div>
+</div>
+
 <!-- PAINEL HISTÓRICO DE SAÍDAS -->
 <div id="saidasHistOverlay" onclick="fecharSaidasHistorico()" style="position:fixed;inset:0;z-index:310;display:none;background:#00000070"></div>
 <div id="saidasHistPanel" style="position:fixed;top:0;bottom:0;left:0;right:0;z-index:311;background:var(--bg2);display:none;flex-direction:column;height:100vh;height:100dvh">
@@ -521,7 +566,7 @@
 
 <!-- MENU MOVIMENTAÇÃO -->
 <div id="moveOverlay2" onclick="fecharMoveMenu()" style="position:fixed;inset:0;z-index:299;display:none;background:#00000055"></div>
-<div id="moveMenu" style="position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:14px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease">
+<div id="moveMenu" style="position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:14px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease;overflow-y:auto;max-height:90vh">
   <div id="moveNome" style="font-size:22px;color:var(--text);font-weight:bold;text-align:center"></div>
   <div id="moveSaldo" style="font-size:26px;color:var(--accent);text-align:center;font-weight:bold;margin-top:-4px"></div>
   <input id="moveQtd" type="number" placeholder="Quantidade" min="1" style="background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:16px;color:var(--text);font-size:22px;font-family:Georgia,serif;outline:none;text-align:center;font-weight:bold;width:100%"/>
@@ -529,7 +574,8 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <button onclick="aplicarMove('+')" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:16px;font-size:17px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">＋ Entrada</button>
     <button onclick="aplicarMove('-')" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:16px;font-size:17px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">－ Saída</button>
-    <button onclick="fecharMoveMenu()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;cursor:pointer;font-family:Georgia,serif;grid-column:1/-1">Voltar</button>
+    <button onclick="aplicarReserva()" style="background:linear-gradient(135deg,#b8943e,#8a6a20);color:#fff;border:none;border-radius:12px;padding:16px;font-size:17px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">🔖 Reservar</button>
+    <button onclick="fecharMoveMenu()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;grid-column:1/-1">Voltar</button>
   </div>
 </div>
 
@@ -660,7 +706,7 @@
   <div id="secPedidos" class="section">
     <div class="section-header">
       <span class="section-title">Pedidos</span>
-      <button class="btn-fechar-lembrete" onclick="toggleFormPedido()">+ Adicionar Pedido</button>
+      <button class="btn-fechar-lembrete" onclick="toggleFormPedido()" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:50%;width:44px;height:44px;font-size:26px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;box-shadow:0 4px 14px #3a7bd566">+</button>
     </div>
     <div class="form-card" id="pedidoFormCard" style="margin-bottom:18px;display:none">
       <div id="pedFormCamposExtra">
@@ -685,27 +731,13 @@
       </div>
       <div class="row-group">
         <div class="field-group wide">
-          <div id="wrapVoltarItensPedido" style="display:none;align-items:center;justify-content:flex-end">
-            <button type="button" id="btnVoltarItensPedido" onclick="desativarModoItensPedido()" title="Fechar" style="flex-shrink:0;background:transparent;border:none;color:var(--text2);font-size:18px;cursor:pointer;line-height:1;padding:4px 6px">✕</button>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
-            <div style="display:flex;gap:6px">
-              <button type="button" onclick="inserirLarguraPedido(120)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">120cm</button>
-              <button type="button" onclick="inserirLarguraPedido(110)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">110cm</button>
-              <button type="button" onclick="inserirLarguraPedido(100)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">100cm</button>
-              <button type="button" onclick="inserirLarguraPedido(90)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">90cm</button>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button type="button" onclick="inserirLarguraPedido(60)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">60cm</button>
-              <button type="button" onclick="inserirLarguraPedido(70)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">70cm</button>
-              <button type="button" onclick="inserirLarguraPedido(80)" style="flex:1;background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:6px 4px;font-size:18px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">80cm</button>
-            </div>
-          </div>
           <textarea id="pedItens" onfocus="ativarModoItensPedido()" placeholder="digitar..." style="min-height:180px;width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none;resize:vertical"></textarea>
         </div>
       </div>
-      <button class="btn-save" style="background:linear-gradient(135deg,#3a9a50,#2a7a38);color:#fff;border:none" onclick="adicionarPedido()">Salvar Pedido</button>
-      <button class="btn-fechar-lembrete" style="width:100%;margin-top:2px" onclick="toggleFormPedido()">✕ Fechar</button>
+      <div style="position:sticky;bottom:0;background:var(--bg2);padding:10px 0 4px;margin-top:8px;z-index:10;display:flex;gap:8px;align-items:center" id="pedidoBarraBotoes">
+        <button onclick="toggleFormPedido()" style="background:transparent;color:var(--text);border:2px solid var(--border2);border-radius:12px;padding:13px 18px;font-size:22px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;flex-shrink:0;line-height:1">✕</button>
+        <button class="btn-save" style="background:linear-gradient(135deg,#3a9a50,#2a7a38);color:#fff;border:none;flex:1;font-size:15px;padding:14px" onclick="adicionarPedido()">Salvar Pedido</button>
+      </div>
     </div>
     <div class="hist-list" id="pedidosList"></div>
   </div>
@@ -759,6 +791,8 @@ window.addEventListener("scroll",()=>{
 document.addEventListener("click",e=>{
   if(fabOpen&&!e.target.closest("#fab")&&!e.target.closest("#fabMenu"))closeFab();
   if(!e.target.closest("#btnTema")&&!e.target.closest("#temaPanel"))fecharTemaPanel();
+  if(!e.target.closest(".btn-config-marc")&&!e.target.closest(".marc-config-menu"))
+    document.querySelectorAll(".marc-config-menu").forEach(m=>m.style.display="none");
 });
 
 // TEMAS
@@ -822,8 +856,12 @@ function irView(view){
   document.getElementById("btnVoltar").className=view!=="home"?"show":"";
   document.getElementById("btnPedidos").style.display=view==="home"?"inline-flex":"none";
   document.getElementById("fab").className=view==="tipo"?"show":"";
-  document.getElementById("btnPDF").style.display=view==="tipo"?"inline-flex":"none";
-  document.getElementById("btnZap").style.display=view==="tipo"?"inline-flex":"none";
+  document.getElementById("btnSaidas").style.display=view==="tipo"?"inline-flex":"none";
+  const btnRes = document.getElementById("btnReserva");
+  if (btnRes) btnRes.style.display=view==="tipo"?"inline-flex":"none";
+  const exportWrap = document.getElementById("btnExportarWrap");
+  if (exportWrap) exportWrap.style.display=view==="tipo"?"flex":"none";
+  // btnZap integrado no btnExportarWrap
   document.getElementById("btnSaidas").style.display=view==="tipo"?"inline-flex":"none";
   if (view==="tipo") atualizarBtnSaidas();
   if (view==="pedidos") renderPedidos();
@@ -872,6 +910,7 @@ function renderHome(){
     const p=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="porta").reduce((s,i)=>s+Number(i.qtd),0);
     const j=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="janela").reduce((s,i)=>s+Number(i.qtd),0);
     const o=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="outro").reduce((s,i)=>s+Number(i.qtd),0);
+    const res=reservas.filter(r=>r.marceneiroId===m.id).reduce((s,r)=>s+Number(r.qtd),0);
     const div=document.createElement("div");div.className="marc-card";
     div.style.cssText=`background:linear-gradient(135deg,${light}18 0%,${dark}0a 100%);border-color:${light}44`;
     const mLembretes = lembretes[m.id] || [];
@@ -879,10 +918,11 @@ function renderHome(){
     div.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="marc-nome" style="margin:0;flex:1">${m.nome}</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-lembrete-marc${lemCount?' bell-aceso':''}" style="background:${lemCount?'color-mix(in srgb,var(--accent) 18%,transparent)':'transparent'};border:1px solid ${lemCount?'var(--accent)':'var(--border2)'};color:${lemCount?'var(--accent)':'var(--text2)'};border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px">${lemCount?`🔔 <span style="font-size:12px;font-weight:900">${lemCount}</span>`:'🔕'}</button>
-          <button class="btn-edit-marc" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:all .2s;white-space:nowrap">✏️</button>
-          <button class="btn-del-marc" style="background:transparent;border:1px solid #e0505033;color:#e05050;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:all .2s;white-space:nowrap">🗑</button>
+          <div style="position:relative">
+            <button class="btn-config-marc" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px">⚙️</button>
+          </div>
         </div>
       </div>
       <div class="marc-stats">
@@ -890,45 +930,19 @@ function renderHome(){
         <span style="color:var(--border2)">·</span>
         <div class="marc-stat">🪟 <strong>${j}</strong> janela${j!==1?"s":""}</div>
         ${o ? `<span style="color:var(--border2)">·</span><div class="marc-stat">📦 <strong>${o}</strong> outro${o!==1?"s":""}</div>` : ""}
+        ${res ? `<span style="color:var(--border2)">·</span><div class="marc-stat" style="color:#c8a96e">🔖 <strong>${res}</strong> reserva${res!==1?"s":""}</div>` : ""}
       </div>`;
 
     const btnLembrete = div.querySelector(".btn-lembrete-marc");
     btnLembrete.addEventListener("click", e => { e.stopPropagation(); abrirLembrete(mId, mNome); });
 
-    let editReady=false, delReady=false, editTimer=null, delTimer=null;
-    const btnEdit = div.querySelector(".btn-edit-marc");
-    const btnDel  = div.querySelector(".btn-del-marc");
     const mId = m.id;
     const mNome = m.nome;
+    const btnConfig = div.querySelector(".btn-config-marc");
 
-    btnEdit.addEventListener("click", e => {
+    btnConfig.addEventListener("click", e => {
       e.stopPropagation();
-      if(!editReady){
-        editReady=true;
-        btnEdit.textContent="✓ Editar";
-        btnEdit.style.borderColor="var(--accent)";
-        btnEdit.style.color="var(--accent)";
-        editTimer=setTimeout(()=>{editReady=false;btnEdit.textContent="✏️";btnEdit.style.borderColor="";btnEdit.style.color="";},2000);
-      } else {
-        clearTimeout(editTimer);editReady=false;
-        btnEdit.textContent="✏️";btnEdit.style.borderColor="";btnEdit.style.color="";
-        editarMarceneiro(mId);
-      }
-    });
-
-    btnDel.addEventListener("click", e => {
-      e.stopPropagation();
-      if(!delReady){
-        delReady=true;
-        btnDel.textContent="✓ Excluir";
-        btnDel.style.background="#e0505022";
-        btnDel.style.borderColor="#e05050";
-        delTimer=setTimeout(()=>{delReady=false;btnDel.textContent="🗑";btnDel.style.background="";btnDel.style.borderColor="";},2000);
-      } else {
-        clearTimeout(delTimer);delReady=false;
-        btnDel.textContent="🗑";btnDel.style.background="";btnDel.style.borderColor="";
-        abrirDeleteMarceneiro(mId, mNome);
-      }
+      abrirConfigMarc(mId, mNome);
     });
 
     div.addEventListener("click", () => selecionarMarceneiro(mId));
@@ -984,6 +998,7 @@ function renderHistorico(){
   const m=getMarceneiro();const div=document.getElementById("historico");
   const todos=items.filter(i=>i.marceneiroId===m.id);
   let itens=filtroCategoria?todos.filter(i=>i.categoria===filtroCategoria):todos;
+  itens=itens.filter(i=>Number(i.qtd)>0);
   if(filtroBusca) itens=itens.filter(i=>(i.tipo||"").toLowerCase().includes(filtroBusca.toLowerCase()));
   // Organiza por nome (alfabético) e cm DESC — só no modo Auto
   if (!modoManual){
@@ -1021,10 +1036,22 @@ function renderHistorico(){
 // DOUBLE TAP
 function buildHistItem(item,list){
   const nome=_nomeItemCategoria(item);
-  const medidas=`<span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px;color:var(--text)">${item.qtd}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px">${item.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span>`;
+  // Calcular reservado para este item
+  const reservado = reservas.filter(r =>
+    r.marceneiroId === item.marceneiroId && (
+      (item.id && r.itemId === item.id) ||
+      (r.nome === nome && String(r.largura) === String(item.largura))
+    )
+  ).reduce((s,r) => s + Number(r.qtd), 0);
+  const disponivel = Math.max(0, Number(item.qtd) - reservado);
+  const qtdExibida = reservado > 0 ? disponivel : item.qtd;
+  const medidas=`<span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px;color:var(--text)">${qtdExibida}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px">${item.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span>`;
+  const tagReserva = reservado > 0
+    ? `<span style="font-size:14px;color:#c8a96e;font-weight:900;background:#c8a96e22;border:1px solid #c8a96e55;border-radius:6px;padding:2px 8px;flex-shrink:0;white-space:nowrap">-${reservado}</span>`
+    : "";
   const el=document.createElement("div");el.className="hist-item";el.dataset.id=item.id;
   const emoji = _emojiCategoria(item.categoria);
-  el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap"><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu(${item.id})" style="cursor:pointer;flex-shrink:0">${medidas}</span><span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${nome}</span></div></div><div class="hist-handle">⋮⋮</div>`;
+  el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:nowrap"><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu(${item.id})" style="cursor:pointer;flex-shrink:0">${medidas}</span><span class="hist-nome" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</span>${tagReserva}</div></div><div class="hist-handle" style="opacity:0;width:8px;padding:0;border:none"></div>`;
   // Filtro ao clicar no emoji
   el.querySelector(".hist-emoji").addEventListener("click", e => {
     e.stopPropagation();
@@ -1418,10 +1445,11 @@ function atualizarBtnSaidas() {
   else btn.classList.remove("cheio");
 }
 
-function registrarSaida(marceneiroId, nome, largura, qtd, categoria) {
+function registrarSaida(marceneiroId, nome, largura, qtd, categoria, itemId) {
   saidas.push({
     id: Date.now(), marceneiroId,
     nome, largura, qtd, categoria: categoria || "porta",
+    itemId: itemId || null,
     data: new Date().toLocaleDateString("pt-BR"),
     hora: new Date().toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"})
   });
@@ -1442,6 +1470,343 @@ function fecharSaidas() {
   document.getElementById("saidasPanel").classList.remove("show");
 }
 
+// ============ RESERVAS ============
+let reservas = [];
+function carregarReservas() {
+  try { reservas = JSON.parse(localStorage.getItem("reservas")) || []; } catch { reservas = []; }
+}
+function salvarReservas() { localStorage.setItem("reservas", JSON.stringify(reservas)); cloudPush(); }
+
+function registrarReserva(marceneiroId, nome, largura, qtd, categoria, itemId, cliente) {
+  reservas.push({
+    id: Date.now(), marceneiroId,
+    nome, largura, qtd, categoria: categoria || "porta",
+    itemId: itemId || null,
+    cliente: cliente || "",
+    data: new Date().toLocaleDateString("pt-BR")
+  });
+  salvarReservas();
+}
+
+function abrirReserva() {
+  const m = getMarceneiro(); if (!m) return;
+  document.getElementById("reservaNomeLabel").textContent = m.nome;
+  renderReserva();
+  document.getElementById("reservaOverlay").style.display = "block";
+  document.getElementById("reservaPanel").style.right = "0";
+}
+
+function fecharReserva() {
+  document.getElementById("reservaOverlay").style.display = "none";
+  document.getElementById("reservaPanel").style.right = "-100%";
+}
+
+function renderReserva() {
+  const m = getMarceneiro();
+  const list = document.getElementById("reservaList");
+  const raw = reservas.filter(r => r.marceneiroId === m.id);
+  if (!raw.length) {
+    list.innerHTML = '<div class="saidas-vazio">Nenhuma reserva.</div>';
+    return;
+  }
+  list.innerHTML = "";
+
+  // Agrupar por cliente → dentro: por nome+largura
+  const porCliente = {};
+  raw.forEach(r => {
+    const itemAtual = r.itemId ? items.find(i => i.id === r.itemId) : null;
+    const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : r.nome;
+    const cli = r.cliente || "__sem_cliente__";
+    if (!porCliente[cli]) porCliente[cli] = { cliente: r.cliente || "", itens: {} };
+    const chave = nomeAtual + "||" + r.largura;
+    if (porCliente[cli].itens[chave]) {
+      porCliente[cli].itens[chave].qtd += Number(r.qtd);
+      porCliente[cli].itens[chave].ids.push(r.id);
+    } else {
+      porCliente[cli].itens[chave] = { nome: nomeAtual, largura: r.largura, qtd: Number(r.qtd), itemId: r.itemId, ids: [r.id] };
+    }
+  });
+
+  let totalGeral = 0;
+
+  Object.values(porCliente).forEach(grupo => {
+    const itens = Object.values(grupo.itens);
+    const totalCli = itens.reduce((s, it) => s + it.qtd, 0);
+    totalGeral += totalCli;
+
+    const div = document.createElement("div");
+    div.className = "saida-item";
+    div.style.cssText = "flex-direction:column;align-items:stretch;padding:0;gap:0;overflow:hidden";
+
+    // Cabeçalho clicável
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;cursor:pointer;user-select:none;-webkit-user-select:none";
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <span class="reserva-chevron" style="font-size:12px;color:var(--text2);transition:transform .2s">▶</span>
+        ${grupo.cliente ? `<span class="reserva-nome-cliente" style="font-size:15px;color:#c8a96e;font-weight:bold">👤 ${grupo.cliente}</span>` : `<span class="reserva-nome-cliente" style="font-size:14px;color:var(--text2)">Sem cliente</span>`}
+        <span style="font-size:13px;color:var(--text2);font-weight:bold">${totalCli} un</span>
+      </div>`;
+    div.appendChild(header);
+
+    // Corpo expansível (começa oculto)
+    const corpo = document.createElement("div");
+    corpo.style.cssText = "display:none;flex-direction:column;gap:8px;padding:0 14px 12px";
+
+    // Botões de ação
+    const acoes = document.createElement("div");
+    acoes.style.cssText = "display:flex;gap:6px;align-items:center;padding-top:4px;border-top:1px solid var(--border);margin:0 -14px;padding:8px 14px 4px";
+    acoes.innerHTML = `
+      <button class="reserva-editar-cliente-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:8px;font-family:Georgia,serif" title="Editar nome">✏️</button>
+      <button class="reserva-png-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:15px;cursor:pointer;padding:4px 8px;border-radius:8px" title="Gerar PNG">🖼️</button>
+      <button class="reserva-zap-btn" style="background:transparent;border:1px solid #25D36644;color:#25D366;font-size:15px;cursor:pointer;padding:4px 8px;border-radius:8px" title="WhatsApp">💬</button>
+      <button class="reserva-retornar-todos-btn" style="background:transparent;border:1px solid #2a9a5044;color:#2a9a50;font-size:13px;font-weight:bold;cursor:pointer;padding:4px 10px;border-radius:8px;font-family:Georgia,serif;margin-left:auto" title="Retornar tudo ao estoque">↩ tudo</button>`;
+    corpo.appendChild(acoes);
+
+    // Toggle ao clicar no header
+    const chevron = header.querySelector(".reserva-chevron");
+    header.addEventListener("click", () => {
+      const aberto = corpo.style.display !== "none";
+      corpo.style.display = aberto ? "none" : "flex";
+      chevron.style.transform = aberto ? "" : "rotate(90deg)";
+    });
+
+    // Itens do cliente
+    itens.forEach(it => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px";
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;gap:0">
+          <span style="font-size:17px;font-weight:900">${it.qtd}</span>
+          <span style="font-size:12px;font-weight:300;color:var(--text2);margin:0 4px">|</span>
+          <span style="font-size:17px;font-weight:900;color:#c8a96e">${it.largura}</span><span style="font-size:10px;color:#c8a96e;margin-right:6px">cm</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${it.nome}</span>
+        </div>
+        <button class="reserva-retornar-item-btn" style="background:transparent;border:1px solid #2a9a5044;color:#2a9a50;font-size:15px;font-weight:bold;cursor:pointer;padding:4px 10px;border-radius:8px;flex-shrink:0;font-family:Georgia,serif" title="Retornar ao estoque">↩</button>`;
+      const btnItem = row.querySelector(".reserva-retornar-item-btn");
+      btnItem.addEventListener("click", e => {
+        e.stopPropagation();
+        retornarReservaEstoque(it.nome, it.largura, it.itemId);
+      });
+      corpo.appendChild(row);
+    });
+
+    div.appendChild(corpo);
+
+    const btnEditar = acoes.querySelector(".reserva-editar-cliente-btn");
+    btnEditar.addEventListener("click", e => {
+      e.stopPropagation();
+      editarNomeClienteReserva(grupo.cliente, itens, header);
+    });
+
+    // PNG individual por cliente
+    const btnPng = acoes.querySelector(".reserva-png-btn");
+    btnPng.addEventListener("click", e => {
+      e.stopPropagation();
+      _compartilharReservaClientePNG(m, grupo.cliente, itens, btnPng);
+    });
+
+    // WhatsApp individual por cliente
+    const btnZap = acoes.querySelector(".reserva-zap-btn");
+    btnZap.addEventListener("click", e => {
+      e.stopPropagation();
+      _compartilharReservaClienteTexto(m, grupo.cliente, itens);
+    });
+
+    // Botão retornar tudo
+    const btnTodos = acoes.querySelector(".reserva-retornar-todos-btn");
+    btnTodos.addEventListener("click", e => {
+      e.stopPropagation();
+      _abrirMenuReservaTudo(m, grupo.cliente, itens);
+    });
+
+    list.appendChild(div);
+  });
+
+  const totalDiv = document.createElement("div");
+  totalDiv.style.cssText = "display:flex;justify-content:flex-start;align-items:center;gap:6px;padding:10px 4px 4px;border-top:1px solid var(--border);margin-top:4px";
+  totalDiv.innerHTML = `<span style="font-size:13px;font-weight:700;color:#c8a96e;letter-spacing:1px">RESERVADO</span><span style="font-size:24px;font-weight:900;color:#c8a96e">${totalGeral}</span><span style="font-size:13px;font-weight:700;color:var(--text)">un</span>`;
+  list.appendChild(totalDiv);
+}
+
+function removerReserva(nome, largura) {
+  const m = getMarceneiro(); if (!m) return;
+  reservas = reservas.filter(r => !(r.marceneiroId === m.id && r.nome === nome && String(r.largura) === String(largura)));
+  salvarReservas();
+  renderReserva();
+}
+
+function retornarReservaEstoque(nome, largura, itemId) {
+  const m = getMarceneiro(); if (!m) return;
+  const grupo = reservas.filter(r => r.marceneiroId === m.id && (
+    (itemId && r.itemId === itemId) ||
+    (r.nome === nome && String(r.largura) === String(largura))
+  ));
+  if (!grupo.length) return;
+  const qtdTotal = grupo.reduce((s,r) => s + Number(r.qtd), 0);
+  _pedirConfirmacao(`Retornar ${qtdTotal} un de "${nome} ${largura}cm" ao estoque?`, () => {
+    const item = items.find(i =>
+      (itemId && i.id === itemId) ||
+      (i.marceneiroId === m.id && _nomeItemCategoria(i).toLowerCase() === nome.toLowerCase() && String(i.largura) === String(largura))
+    );
+    if (item) {
+      item.qtd = Number(item.qtd) + qtdTotal;
+      salvarDados();
+      renderHistorico();
+      renderHome();
+    }
+    // Remove reservas correspondentes
+    const idsRemover = new Set(grupo.map(r => r.id));
+    reservas = reservas.filter(r => !idsRemover.has(r.id));
+    salvarReservas();
+    renderReserva();
+  }, "Retornar", "linear-gradient(135deg,#2a9a50,#1a7038)");
+}
+
+function limparReservas() {
+  const m = getMarceneiro(); if (!m) return;
+  _pedirConfirmacao(`Limpar todas as reservas de ${m.nome}?`, () => {
+    reservas = reservas.filter(r => r.marceneiroId !== m.id);
+    salvarReservas();
+    renderReserva();
+    renderHistorico();
+  });
+}
+
+function compartilharReservaTexto() {
+  const m = getMarceneiro(); if (!m) return;
+  const raw = reservas.filter(r => r.marceneiroId === m.id);
+  if (!raw.length) return;
+  const cliente = (document.getElementById("inputReservaCliente")?.value || "").trim();
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const grupos = {};
+  raw.forEach(r => {
+    const itemAtual = r.itemId ? items.find(i => i.id === r.itemId) : null;
+    const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : r.nome;
+    const chave = nomeAtual + "||" + r.largura;
+    if (grupos[chave]) grupos[chave].qtd += Number(r.qtd);
+    else grupos[chave] = { ...r, nome: nomeAtual, qtd: Number(r.qtd) };
+  });
+  const linhas = [];
+  linhas.push(`*🔖 RESERVA — ${m.nome.toUpperCase()}*`);
+  linhas.push(`_${hoje}_`);
+  if (cliente) linhas.push(`*Cliente:* ${cliente}`);
+  linhas.push("");
+  const total = Object.values(grupos).reduce((s, r) => s + Number(r.qtd), 0);
+  linhas.push(`*TOTAL: ${total} un*`);
+  linhas.push("");
+  Object.values(grupos).forEach(r => {
+    const cli = r.cliente ? ` — ${r.cliente}` : "";
+    linhas.push(`*${r.qtd}* | ${r.largura}cm  ${r.nome}${cli}`);
+  });
+  linhas.push("");
+  linhas.push("_estoque de portas jl_");
+  _enviarTexto(linhas.join("\n"));
+}
+
+function _compartilharReservaClienteTexto(m, cliente, itens) {
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const total = itens.reduce((s, it) => s + it.qtd, 0);
+  const linhas = [];
+  linhas.push(`*🔖 RESERVA — ${m.nome.toUpperCase()}*`);
+  linhas.push(`_${hoje}_`);
+  if (cliente) linhas.push(`*Cliente: ${cliente}*`);
+  linhas.push("");
+  itens.forEach(it => {
+    linhas.push(`*${it.qtd}* | ${it.largura}cm  ${it.nome}`);
+  });
+  linhas.push("");
+  linhas.push(`*TOTAL: ${total} un*`);
+  linhas.push("_estoque de portas jl_");
+  _enviarTexto(linhas.join("\n"));
+}
+
+function _compartilharReservaClientePNG(m, cliente, itens, btnEl) {
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const total = itens.reduce((s, it) => s + it.qtd, 0);
+
+  const W = 1000, MGEM = 40, ROW_H = 70, HEADER_H = 160, FOOTER_H = 70;
+  const bodyH = itens.length * ROW_H + 30;
+  const H = HEADER_H + bodyH + FOOTER_H;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textBaseline = 'alphabetic';
+
+  // Título
+  ctx.font = 'bold 44px monospace';
+  ctx.fillStyle = '#1a1610';
+  ctx.textAlign = 'left';
+  ctx.fillText(`RESERVA — ${m.nome.toUpperCase()}`, MGEM, 56);
+
+  // Linha 2: data + cliente em azul
+  ctx.font = 'bold 32px monospace';
+  ctx.fillStyle = '#888888';
+  ctx.fillText(hoje, MGEM, 104);
+  if (cliente) {
+    const dataW = ctx.measureText(hoje + '  •  ').width;
+    ctx.fillStyle = '#888888';
+    ctx.fillText('  •  ', MGEM + ctx.measureText(hoje).width, 104);
+    ctx.fillStyle = '#3a7bd5';
+    ctx.font = 'bold 36px monospace';
+    ctx.fillText(cliente, MGEM + ctx.measureText(hoje + '  •  ').width, 104);
+  }
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#3a7bd5';
+  ctx.fillText(`TOTAL: ${total} un`, W - MGEM, 104);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#1a1610';
+
+  // Separador
+  ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(MGEM, HEADER_H - 20); ctx.lineTo(W - MGEM, HEADER_H - 20); ctx.stroke();
+
+  let y = HEADER_H + 42;
+  const COL_QTD_RIGHT = MGEM + 80;
+  const COL_LARG = COL_QTD_RIGHT + 22;
+  const COL_NOME = COL_LARG + 120;
+
+  itens.forEach(it => {
+    ctx.font = 'bold 40px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#1a1610';
+    ctx.fillText(String(it.qtd), COL_QTD_RIGHT, y);
+
+    ctx.font = '30px monospace';
+    ctx.fillStyle = '#999999';
+    ctx.textAlign = 'left';
+    ctx.fillText('|', COL_QTD_RIGHT + 8, y);
+
+    ctx.fillStyle = '#1a1610';
+    ctx.font = 'bold 40px monospace';
+    ctx.fillText(String(it.largura), COL_LARG, y);
+    const wLarg = ctx.measureText(String(it.largura)).width;
+    ctx.font = '22px monospace';
+    ctx.fillText('cm', COL_LARG + wLarg + 2, y);
+
+    ctx.font = 'bold 36px monospace';
+    ctx.fillStyle = '#1a1610';
+    ctx.fillText(it.nome || "", COL_NOME, y);
+    y += ROW_H;
+  });
+
+  // Rodapé
+  y += 14;
+  ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(MGEM, y); ctx.lineTo(W - MGEM, y); ctx.stroke();
+  y += 46;
+  ctx.font = 'italic 22px monospace';
+  ctx.fillStyle = '#888888';
+  ctx.textAlign = 'center';
+  ctx.fillText('estoque de portas jl', W / 2, y);
+
+  const nomeCli = (cliente || "reserva").replace(/ /g, '_');
+  _compartilharPNG(canvas, `Reserva_${m.nome.replace(/ /g,'_')}_${nomeCli}.png`, btnEl, 'Reserva');
+}
+
 function renderSaidas() {
   const m = getMarceneiro();
   const list = document.getElementById("saidasList");
@@ -1451,14 +1816,18 @@ function renderSaidas() {
     return;
   }
 
-  // Agrupar por nome + largura
+  // Agrupar por nome + largura, sincronizando nome com estoque quando possível
   const grupos = {};
   raw.forEach(s => {
-    const chave = s.nome + "||" + s.largura;
+    // Se tem itemId, pega o nome atual do item no estoque
+    const itemAtual = s.itemId ? items.find(i => i.id === s.itemId) : null;
+    const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : s.nome;
+    const sAtual = { ...s, nome: nomeAtual };
+    const chave = nomeAtual + "||" + s.largura;
     if (grupos[chave]) {
       grupos[chave].qtd += Number(s.qtd);
     } else {
-      grupos[chave] = { ...s, qtd: Number(s.qtd) };
+      grupos[chave] = { ...sAtual, qtd: Number(s.qtd) };
     }
   });
   // Ordenar: agrupado por espécie (mais recente primeiro), e dentro de cada espécie do MAIOR cm pro MENOR
@@ -1681,15 +2050,159 @@ function abrirMoveMenu(id) {
   document.getElementById("moveQtd").value = "";
   document.getElementById("moveFeedback").textContent = "";
   document.getElementById("moveFeedback").style.color = "var(--accent)";
-  document.getElementById("moveOverlay2").style.display="block"; document.getElementById("moveMenu").style.display="flex"; setTimeout(()=>document.getElementById("moveMenu").style.transform="translateY(0)",10);
+  document.getElementById("moveOverlay2").style.display="block";
+  const panel = document.getElementById("moveMenu");
+  panel.style.display="flex";
+  setTimeout(()=>{ panel.style.transform="translateY(0)"; document.getElementById("moveQtd").focus(); },10);
   document.getElementById("moveMenu").classList.add("show");
-  setTimeout(() => document.getElementById("moveQtd").focus(), 300);
+  if (window.visualViewport) {
+    window._moveVPHandler = () => {
+      const offset = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+      panel.style.bottom = Math.max(0, offset) + "px";
+    };
+    window.visualViewport.addEventListener("resize", window._moveVPHandler);
+    window.visualViewport.addEventListener("scroll", window._moveVPHandler);
+  }
 }
 function fecharMoveMenu() {
   moveId = null;
-  document.getElementById("moveOverlay2").style.display="none"; document.getElementById("moveMenu").style.transform="translateY(100%)"; setTimeout(()=>document.getElementById("moveMenu").style.display="none",250);
-  document.getElementById("moveMenu").classList.remove("show");
+  const panel = document.getElementById("moveMenu");
+  panel.style.transform="translateY(100%)";
+  panel.style.bottom = "0";
+  if (window.visualViewport && window._moveVPHandler) {
+    window.visualViewport.removeEventListener("resize", window._moveVPHandler);
+    window.visualViewport.removeEventListener("scroll", window._moveVPHandler);
+    window._moveVPHandler = null;
+  }
+  document.getElementById("moveOverlay2").style.display="none";
+  setTimeout(()=>panel.style.display="none",250);
+  panel.classList.remove("show");
 }
+let _reservaNomeCallback = null;
+function _pedirNomeReserva(nome, largura, callback) {
+  _reservaNomeCallback = callback;
+  document.getElementById("reservaNomeProduto").textContent = `${largura}cm  ${nome}`;
+  document.getElementById("reservaNomeInput").value = "";
+
+  // Listar clientes existentes nas reservas
+  const clientesExistentes = [...new Set(reservas.filter(r => r.cliente).map(r => r.cliente))];
+  const listaEl = document.getElementById("reservaClienteList");
+  listaEl.innerHTML = "";
+
+  if (clientesExistentes.length) {
+    const titulo = document.createElement("div");
+    titulo.style.cssText = "font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px";
+    titulo.textContent = "Clientes anteriores";    listaEl.appendChild(titulo);
+
+    clientesExistentes.forEach(cli => {
+      const btn = document.createElement("button");
+      btn.style.cssText = "background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:12px;padding:14px 18px;font-size:16px;font-family:Georgia,serif;cursor:pointer;text-align:left;font-weight:bold";
+      btn.textContent = `👤 ${cli}`;
+      btn.addEventListener("click", () => {
+        const cb = _reservaNomeCallback;
+        _reservaNomeCallback = null;
+        fecharNomeReserva();
+        setTimeout(() => cb(cli), 260);
+      });
+      listaEl.appendChild(btn);
+    });
+
+    const div = document.createElement("div");
+    div.style.cssText = "border-top:1px solid var(--border);margin:8px 0";
+    listaEl.appendChild(div);
+  }
+
+  const semNome = document.createElement("button");
+  semNome.style.cssText = "background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:12px;padding:13px 18px;font-size:14px;font-family:Georgia,serif;cursor:pointer;text-align:left";
+  semNome.textContent = "Sem cliente";
+  semNome.addEventListener("click", () => {
+    const cb = _reservaNomeCallback;
+    _reservaNomeCallback = null;
+    fecharNomeReserva();
+    setTimeout(() => cb(""), 260);
+  });
+  listaEl.appendChild(semNome);
+
+  document.getElementById("reservaNomeOverlay").style.display = "block";
+  const panel = document.getElementById("reservaNomePanel");
+  panel.style.display = "flex";
+}
+
+function fecharNomeReserva() {
+  document.getElementById("reservaNomePanel").style.display = "none";
+  document.getElementById("reservaNomeOverlay").style.display = "none";
+  _reservaNomeCallback = null;
+}
+
+function confirmarNomeReserva() {
+  const cliente = (document.getElementById("reservaNomeInput").value || "").trim();
+  const cb = _reservaNomeCallback;
+  _reservaNomeCallback = null;
+  fecharNomeReserva();
+  if (cb) cb(cliente);
+}
+
+function editarNomeClienteReserva(clienteAtual, itens, headerEl) {
+  const m = getMarceneiro(); if (!m) return;
+  const idsAfetados = new Set(itens.flatMap(it => it.ids));
+
+  const nomeSpan = headerEl.querySelector(".reserva-nome-cliente");
+  if (!nomeSpan) return;
+
+  // Substitui só o span do nome por um input inline
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = clienteAtual || "";
+  input.placeholder = "Nome do cliente…";
+  input.style.cssText = "background:var(--input-bg);border:1px solid var(--accent);border-radius:8px;padding:4px 10px;color:var(--text);font-size:14px;font-family:Georgia,serif;outline:none;flex:1;min-width:0;max-width:55%";
+
+  const salvar = () => {
+    const novo = input.value.trim();
+    reservas.forEach(r => { if (idsAfetados.has(r.id)) r.cliente = novo; });
+    salvarReservas();
+    renderReserva();
+  };
+
+  input.addEventListener("keydown", e => { if (e.key === "Enter") salvar(); });
+
+  const btnOk = document.createElement("button");
+  btnOk.textContent = "✓";
+  btnOk.style.cssText = "background:#2a9a50;border:none;color:#fff;font-size:16px;font-weight:bold;border-radius:8px;padding:4px 10px;cursor:pointer;flex-shrink:0";
+  btnOk.addEventListener("click", salvar);
+
+  const btnCancel = document.createElement("button");
+  btnCancel.textContent = "✕";
+  btnCancel.style.cssText = "background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:14px;border-radius:8px;padding:4px 8px;cursor:pointer;flex-shrink:0";
+  btnCancel.addEventListener("click", renderReserva);
+
+  nomeSpan.replaceWith(input);
+  // Insere botões após o input
+  input.after(btnOk);
+  btnOk.after(btnCancel);
+  input.focus();
+}
+
+function aplicarReserva() {
+  const val = parseInt(document.getElementById("moveQtd").value);
+  if (!val || val <= 0) {
+    document.getElementById("moveFeedback").style.color = "var(--danger)";
+    document.getElementById("moveFeedback").textContent = "Digite uma quantidade válida.";
+    return;
+  }
+  const idx = items.findIndex(i => i.id === moveId);
+  if (idx === -1) return;
+  const item = items[idx];
+  const nome = _nomeItemCategoria(item);
+
+  // Pede o nome do cliente via prompt estilizado
+  _pedirNomeReserva(nome, item.largura, (cliente) => {
+    registrarReserva(item.marceneiroId, nome, item.largura, val, item.categoria, item.id, cliente);
+    document.getElementById("moveFeedback").style.color = "#c8a96e";
+    document.getElementById("moveFeedback").textContent = `🔖 ${val} reservado(s)${cliente ? " — " + cliente : ""}`;
+    document.getElementById("moveQtd").value = "";
+  });
+}
+
 function aplicarMove(sinal) {
   const val = parseInt(document.getElementById("moveQtd").value);
   if (!val || val <= 0) {
@@ -1723,6 +2236,7 @@ function aplicarMove(sinal) {
 }
 
 let _pendingMove = null;
+let _novoCarrCallbacks = null; // { iniciar, adicionar }
 
 function _executarMove(sinal, val, idx) {
   const antes = items[idx].qtd;
@@ -1741,7 +2255,7 @@ function _executarMove(sinal, val, idx) {
     document.getElementById("moveFeedback").textContent = `-${val} → Novo saldo: ${items[idx].qtd}`;
     // Registrar saída
     const nomeItem = _nomeItemCategoria(items[idx]);
-    registrarSaida(items[idx].marceneiroId, nomeItem, items[idx].largura, val, items[idx].categoria);
+    registrarSaida(items[idx].marceneiroId, nomeItem, items[idx].largura, val, items[idx].categoria, items[idx].id);
   }
   document.getElementById("moveSaldo").textContent = "Saldo atual: " + items[idx].qtd;
   document.getElementById("moveQtd").value = "";
@@ -1770,13 +2284,20 @@ function fecharNovoCarr() {
     document.getElementById("novoCarrOverlay").style.display = "none";
   }, 250);
   _pendingMove = null;
+  _novoCarrCallbacks = null;
 }
 
 function novoCarrIniciar() {
+  if (_novoCarrCallbacks) {
+    const cb = _novoCarrCallbacks.iniciar;
+    _novoCarrCallbacks = null;
+    fecharNovoCarr();
+    cb();
+    return;
+  }
   if (!_pendingMove) { fecharNovoCarr(); return; }
   const { sinal, val, idx } = _pendingMove;
   const marcId = items[idx].marceneiroId;
-  // Limpa saídas desse marceneiro e o motorista
   saidas = saidas.filter(s => s.marceneiroId !== marcId);
   const inpMot = document.getElementById("inputMotorista");
   if (inpMot) inpMot.value = "";
@@ -1787,6 +2308,13 @@ function novoCarrIniciar() {
 }
 
 function novoCarrAdicionar() {
+  if (_novoCarrCallbacks) {
+    const cb = _novoCarrCallbacks.adicionar;
+    _novoCarrCallbacks = null;
+    fecharNovoCarr();
+    cb();
+    return;
+  }
   if (!_pendingMove) { fecharNovoCarr(); return; }
   const { sinal, val, idx } = _pendingMove;
   _pendingMove = null;
@@ -1794,6 +2322,20 @@ function novoCarrAdicionar() {
   _executarMove(sinal, val, idx);
 }
 
+
+function toggleExportarMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById("exportarMenu");
+  const isOpen = menu.style.display === "flex";
+  menu.style.display = isOpen ? "none" : "flex";
+  if (!isOpen) {
+    setTimeout(() => document.addEventListener("click", fecharExportarMenu, { once: true }), 10);
+  }
+}
+function fecharExportarMenu() {
+  const menu = document.getElementById("exportarMenu");
+  if (menu) menu.style.display = "none";
+}
 
 function exportarPDF() {
   const { jsPDF } = window.jspdf;
@@ -1952,7 +2494,7 @@ function _montarTextoEstoque(m, itens, filtros) {
     linhas.push(_blocoMonoEstoque(outros));
   }
   linhas.push("");
-  linhas.push("_Estoque de portas JL_");
+  linhas.push("_estoque de portas jl_");
   return linhas.join("\n");
 }
 
@@ -1962,16 +2504,20 @@ function _prepararBlocosSaidas(mSaidas, opts) {
   const motorista = (opts.motorista !== undefined) ? opts.motorista : (document.getElementById("inputMotorista")?.value || "").trim();
   const total = mSaidas.reduce((a,s) => a + Number(s.qtd), 0);
 
-  // Agrupa por espécie+largura (mesma lógica do PDF)
+  // Agrupa por espécie+largura, sincronizando nome com estoque quando possível
   const grupos = {};
   mSaidas.forEach(s => {
-    const chave = s.nome + "||" + s.largura;
+    const itemAtual = s.itemId ? items.find(i => i.id === s.itemId) : null;
+    const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : s.nome;
+    const chave = nomeAtual + "||" + s.largura;
     if (grupos[chave]) grupos[chave].qtd += Number(s.qtd);
-    else grupos[chave] = { ...s, qtd: Number(s.qtd) };
+    else grupos[chave] = { ...s, nome: nomeAtual, qtd: Number(s.qtd) };
   });
   const speciesLastIndex = {};
   mSaidas.forEach((s, i) => {
-    const k = (s.nome || "").toLowerCase().trim();
+    const itemAtual = s.itemId ? items.find(it => it.id === s.itemId) : null;
+    const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : s.nome;
+    const k = (nomeAtual || "").toLowerCase().trim();
     speciesLastIndex[k] = i;
   });
   const agrupados = Object.values(grupos).sort((a, b) => {
@@ -2039,38 +2585,47 @@ function _montarTextoSaidas(m, mSaidas, opts) {
   linhas.push(`*TOTAL: ${total} un*`);
   linhas.push("");
 
-  const FIG = "\u2007";
+  const FIG = "\u2007"; // figure space
   const maxQtd = Math.max(...blocos.flatMap(b => b.itens).map(i => String(i.qtd).length));
 
   blocos.forEach(b => {
     const nomeEspecie = b.especie || "";
-    b.itens.forEach(it => {
+    if (b.itens.length === 1) {
+      const it = b.itens[0];
       const q = String(it.qtd);
       const pad = FIG.repeat(maxQtd - q.length);
       linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nomeEspecie}`);
-    });
-    linhas.push(`*TOTAL ${b.sub}un*`);
+    } else {
+      b.itens.forEach(it => {
+        const q = String(it.qtd);
+        const pad = FIG.repeat(maxQtd - q.length);
+        linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nomeEspecie}`);
+      });
+      linhas.push(`Total ${b.sub} un`);
+    }
     linhas.push("");
   });
 
-  linhas.push("_Estoque de portas JL_");
+  linhas.push("_estoque de portas jl_");
   return linhas.join("\n");
 }
 
 function _prepararBlocosPedido(cliente, dataEntrega, itens) {
   const dataFmt = formatDataEntrega(dataEntrega);
   const diaSem = diaSemanaEntrega(dataEntrega);
-  const total = itens.reduce((a,p) => a + Number(p.qtd), 0);
+  const itensPedido = itens.filter(p => !p.obs);
+  const obsItens = itens.filter(p => p.obs);
+  const total = itensPedido.reduce((a,p) => a + Number(p.qtd), 0);
 
   // Agrupa por nome + largura
   const grupos = {};
-  itens.forEach(p => {
+  itensPedido.forEach(p => {
     const chave = (p.tipo || "") + "||" + p.largura;
     if (grupos[chave]) grupos[chave].qtd += Number(p.qtd);
     else grupos[chave] = { ...p, qtd: Number(p.qtd) };
   });
   const nomeLastIndex = {};
-  itens.forEach((p, i) => {
+  itensPedido.forEach((p, i) => {
     const k = (p.tipo || "").toLowerCase().trim();
     nomeLastIndex[k] = i;
   });
@@ -2100,16 +2655,14 @@ function _prepararBlocosPedido(cliente, dataEntrega, itens) {
   });
   if (blocoAtual.length) blocos.push({ nome: lastNome, sub: subAcc, itens: blocoAtual });
 
-  return { dataFmt, diaSem, total, blocos };
+  return { dataFmt, diaSem, total, blocos, obsItens };
 }
 function _montarTextoPedido(cliente, dataEntrega, itens) {
-  const { dataFmt, diaSem, total, blocos } = _prepararBlocosPedido(cliente, dataEntrega, itens);
+  const { dataFmt, diaSem, total, blocos, obsItens } = _prepararBlocosPedido(cliente, dataEntrega, itens);
 
   const linhas = [];
   linhas.push(`*📋 PEDIDO — ${cliente.toUpperCase()}*`);
   if (dataFmt) linhas.push(`_Entrega: ${diaSem}, ${dataFmt}_`);
-  linhas.push("");
-  linhas.push(`*TOTAL: ${total} un*`);
   linhas.push("");
 
   const FIG = "\u2007";
@@ -2122,11 +2675,15 @@ function _montarTextoPedido(cliente, dataEntrega, itens) {
       const pad = FIG.repeat(maxQtd - q.length);
       linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nome}`);
     });
-    linhas.push(`*TOTAL ${b.sub}un*`);
+    if (b.itens.length > 1) linhas.push(`*TOTAL ${b.sub}un*`);
     linhas.push("");
   });
 
-  linhas.push("_Estoque de portas JL_");
+  if (obsItens.length) {
+    linhas.push("");
+    obsItens.forEach(o => linhas.push(`📝 ${o.tipo || ""}`));
+  }
+  linhas.push("_estoque de portas jl_");
   return linhas.join("\n");
 }
 function compartilharPedidoTexto(cliente, dataEntrega) {
@@ -2137,11 +2694,38 @@ function compartilharPedidoTexto(cliente, dataEntrega) {
 
 // PNG do pedido (mesmo conteúdo do texto, em imagem)
 function _gerarCanvasPedido(cliente, dataEntrega, itens) {
-  const { dataFmt, diaSem, total, blocos } = _prepararBlocosPedido(cliente, dataEntrega, itens);
+  const { dataFmt, diaSem, total, blocos, obsItens } = _prepararBlocosPedido(cliente, dataEntrega, itens);
   const W = 1000, MGEM = 40, ROW_H = 54, SUB_H = 50, GAP = 14, HEADER_H = 150, FOOTER_H = 60;
+
+  const OBS_ROW_H = 46;
+  const MAX_TEXT_W = W - MGEM * 2 - 10;
+
+  // Pré-calcular linhas quebradas das obs
+  const obsLinhas = [];
+  const tmpCanvas = document.createElement('canvas');
+  const tmpCtx = tmpCanvas.getContext('2d');
+  tmpCtx.font = 'bold 30px monospace';
+  obsItens.forEach(o => {
+    const txt = `📝 ${o.tipo || ""}`;
+    const palavras = txt.split(' ');
+    let linha = '';
+    const linhasItem = [];
+    for (const p of palavras) {
+      const teste = linha ? linha + ' ' + p : p;
+      if (tmpCtx.measureText(teste).width > MAX_TEXT_W && linha) {
+        linhasItem.push(linha);
+        linha = p;
+      } else {
+        linha = teste;
+      }
+    }
+    if (linha) linhasItem.push(linha);
+    obsLinhas.push(linhasItem);
+  });
 
   let bodyH = 0;
   blocos.forEach(b => { bodyH += b.itens.length * ROW_H + SUB_H + GAP; });
+  if (obsItens.length) bodyH += obsLinhas.reduce((s, ls) => s + ls.length * OBS_ROW_H, 0) + GAP;
   const H = HEADER_H + bodyH + FOOTER_H;
 
   const canvas = document.createElement('canvas');
@@ -2154,8 +2738,12 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
 
   ctx.font = 'bold 38px monospace';
   ctx.textAlign = 'left';
-  const titleTxt = `PEDIDO — ${cliente.toUpperCase()}`;
-  ctx.fillText(titleTxt, MGEM, 52);
+  ctx.fillStyle = '#1a1610';
+  ctx.fillText('PEDIDO — ', MGEM, 52);
+  const prefW = ctx.measureText('PEDIDO — ').width;
+  ctx.fillStyle = '#3a7bd5';
+  ctx.fillText(cliente.toUpperCase(), MGEM + prefW, 52);
+  ctx.fillStyle = '#1a1610';
 
   if (dataFmt) {
     ctx.font = 'bold 32px monospace';
@@ -2163,14 +2751,8 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
     ctx.textAlign = 'left';
     const entregaTxt = `Entrega: ${diaSem}, ${dataFmt}`;
     ctx.fillText(entregaTxt, MGEM, 96);
-    const entregaW = ctx.measureText(entregaTxt).width;
-    ctx.fillText(`   TOTAL: ${total} un`, MGEM + entregaW, 96);
     ctx.fillStyle = '#1a1610';
   } else {
-    ctx.font = 'bold 30px monospace';
-    ctx.fillStyle = '#3a7bd5';
-    ctx.textAlign = 'right';
-    ctx.fillText(`TOTAL: ${total} un`, W - MGEM, 52);
     ctx.fillStyle = '#1a1610';
     ctx.textAlign = 'left';
   }
@@ -2206,20 +2788,39 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
       ctx.font = '18px monospace';
       ctx.fillText('cm', COL_LARG + wLarg + 2, y);
 
-      ctx.font = '28px monospace';
+      ctx.font = 'bold 30px monospace';
+      ctx.fillStyle = '#1a1610';
       ctx.fillText(it.tipo || "", COL_NOME, y);
 
       y += ROW_H;
     });
-    ctx.font = 'bold 26px monospace';
     ctx.fillStyle = '#3a7bd5';
-    ctx.fillText(`TOTAL ${b.sub}un`, MGEM, y);
+    ctx.font = 'bold 26px monospace';
+    const totTxt = `TOTAL ${b.sub}`;
+    ctx.fillText(totTxt, MGEM, y);
+    const totW = ctx.measureText(totTxt).width;
+    ctx.font = '18px monospace';
+    ctx.fillText('un', MGEM + totW + 2, y);
     ctx.fillStyle = '#1a1610';
     y += SUB_H + GAP;
   });
 
-  ctx.font = '18px monospace';
-  ctx.fillStyle = '#999999';
+  // Observações livres
+  if (obsItens.length) {
+    y += GAP;
+    obsLinhas.forEach(linhasItem => {
+      linhasItem.forEach((linha, i) => {
+        ctx.font = 'bold 30px monospace';
+        ctx.fillStyle = '#1a1610';
+        ctx.textAlign = 'left';
+        ctx.fillText(linha, MGEM, y);
+        y += OBS_ROW_H;
+      });
+    });
+  }
+
+  ctx.font = 'bold 20px monospace';
+  ctx.fillStyle = '#d4763b';
   ctx.textAlign = 'center';
   ctx.fillText('Estoque de portas JL', W / 2, H - 20);
 
@@ -2231,9 +2832,11 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
 // comportamento imprevisível (ex: enviar a imagem no lugar do texto).
 let _shareEmAndamento = false;
 
-function _compartilharPNG(canvas, fileName, btnEl, shareTitle) {
+function _compartilharPNG(canvas, fileName, btnEl, shareTitle, mimeType, quality) {
   if (_shareEmAndamento) return;
   _shareEmAndamento = true;
+  const mime = mimeType || 'image/png';
+  const qual = quality || undefined;
   const txtOriginal = btnEl ? btnEl.textContent : null;
   if (btnEl) { btnEl.textContent = "⏳"; btnEl.disabled = true; }
   const finalizar = () => {
@@ -2242,7 +2845,7 @@ function _compartilharPNG(canvas, fileName, btnEl, shareTitle) {
   };
   canvas.toBlob(blob => {
     if (!blob) { finalizar(); return; }
-    const file = new File([blob], fileName, { type: 'image/png' });
+    const file = new File([blob], fileName, { type: mime });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       navigator.share({ files: [file], title: shareTitle || 'Imagem' }).catch(() => {}).then(finalizar, finalizar);
     } else {
@@ -2255,14 +2858,14 @@ function _compartilharPNG(canvas, fileName, btnEl, shareTitle) {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       finalizar();
     }
-  }, 'image/png');
+  }, mime, qual);
 }
 
 function compartilharPedidoPNG(cliente, dataEntrega, btnEl) {
   const itens = pedidos.filter(p => p.cliente === cliente && (p.dataEntrega || "") === (dataEntrega || ""));
   if (!itens.length) return;
   const canvas = _gerarCanvasPedido(cliente, dataEntrega, itens);
-  _compartilharPNG(canvas, `Pedido_${cliente.replace(/ /g,'_')}.png`, btnEl, 'Pedido');
+  _compartilharPNG(canvas, `Pedido_${cliente.replace(/ /g,'_')}.jpg`, btnEl, 'Pedido', 'image/jpeg', 0.92);
 }
 
 async function _enviarTexto(texto) {
@@ -2383,9 +2986,13 @@ function _gerarCanvasSaidas(m, mSaidas, opts) {
 
       y += ROW_H;
     });
-    ctx.font = 'bold 46px monospace';
     ctx.fillStyle = '#3a7bd5';
-    ctx.fillText(`TOTAL ${b.sub}un`, MGEM, y);
+    ctx.font = 'bold 46px monospace';
+    const subTxt = `TOTAL ${b.sub}`;
+    ctx.fillText(subTxt, MGEM, y);
+    const subW = ctx.measureText(subTxt).width;
+    ctx.font = '28px monospace';
+    ctx.fillText('un', MGEM + subW + 3, y);
     ctx.fillStyle = '#1a1610';
     y += SUB_H + GAP;
   });
@@ -2591,8 +3198,12 @@ if (_mmo) _mmo.addEventListener("click", e => { if(e.target===_mmo) fecharModalM
 let lembreteIdAtual = null;
 function toggleNovoLembreteForm() {
   const form = document.getElementById("novoLembreteForm");
+  const btn = document.getElementById("btnToggleLembrete");
+  const btnSair = document.getElementById("btnSairLembrete");
   const abrindo = form.style.display === "none";
   form.style.display = abrindo ? "flex" : "none";
+  if (btn) btn.textContent = abrindo ? "✕" : "＋";
+  if (btnSair) btnSair.style.display = abrindo ? "none" : "flex";
   if (abrindo) {
     setTimeout(() => {
       form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2926,20 +3537,52 @@ function fecharLembrete() {
 
 // ============ PEDIDOS ============
 let editandoPedidoGroup = null; // {cliente, dataEntrega} do card em edição
+let _pedItensBlurTime = 0;
+let _vpHandler = null;
+
 function ativarModoItensPedido() {
+  if (_vpHandler && window.visualViewport) {
+    window.visualViewport.removeEventListener("resize", _vpHandler);
+    window.visualViewport.removeEventListener("scroll", _vpHandler);
+    _vpHandler = null;
+  }
   document.getElementById("pedFormCamposExtra").style.display = "none";
-  document.getElementById("wrapVoltarItensPedido").style.display = "flex";
   const ta = document.getElementById("pedItens");
   ta.style.minHeight = "30vh";
+  ta._valorAntesBLur = null;
+
+  _vpHandler = () => {
+    const barra = document.getElementById("pedidoBarraBotoes");
+    if (barra) barra.scrollIntoView({ block: "end" });
+  };
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", _vpHandler);
+  }
+
+  ta.onblur = () => {
+    _pedItensBlurTime = Date.now();
+    ta._valorAntesBLur = ta.value;
+    const blocker = document.getElementById("touchBlocker");
+    blocker.style.display = "block";
+    setTimeout(() => { blocker.style.display = "none"; }, 1000);
+  };
+  ta.oninput = () => {
+    if (Date.now() - _pedItensBlurTime < 1000 && ta._valorAntesBLur !== null) {
+      ta.value = ta._valorAntesBLur;
+    } else {
+      ta._valorAntesBLur = null;
+    }
+  };
 }
 function desativarModoItensPedido() {
   document.getElementById("pedFormCamposExtra").style.display = "block";
-  document.getElementById("wrapVoltarItensPedido").style.display = "none";
   const ta = document.getElementById("pedItens");
+  ta.blur();
   ta.style.minHeight = "180px";
 }
 function inserirLarguraPedido(largura) {
   const ta = document.getElementById("pedItens");
+  if (Date.now() - _pedItensBlurTime < 1000) return;
   const value = ta.value;
   const cursor = (typeof ta.selectionStart === "number") ? ta.selectionStart : value.length;
   const lineStart = value.lastIndexOf("\n", cursor - 1) + 1;
@@ -2954,8 +3597,8 @@ function inserirLarguraPedido(largura) {
     novaLinha = ` | ${largura}cm  `;
     novoValor = value.slice(0, lineStart) + novaLinha + value.slice(lineEnd);
     novoCursor = lineStart + novaLinha.length;
-  } else if (trimmed.includes("|")) {
-    // Linha já tem largura: começa uma nova linha abaixo
+  } else if (/[|\/\\]/.test(trimmed)) {
+    // Linha já tem separador: começa uma nova linha abaixo
     novaLinha = ` | ${largura}cm  `;
     novoValor = value.slice(0, lineEnd) + "\n" + novaLinha + value.slice(lineEnd);
     novoCursor = lineEnd + 1 + novaLinha.length;
@@ -3018,12 +3661,15 @@ function editarPedidoCard() {
   document.getElementById("pedDataEntrega").value = dataEntrega;
   document.getElementById("pedTipo").value = "";
   document.getElementById("pedItens").value = itens
-    .map(p => `${p.qtd} | ${p.largura}cm  ${p.tipo || ""}`.trimEnd())
+    .map(p => p.obs ? p.tipo || "" : `${p.qtd} | ${p.largura}cm  ${p.tipo || ""}`.trimEnd())
     .join("\n");
 
   editandoPedidoGroup = { cliente, dataEntrega };
   document.getElementById("pedidoFormCard").style.display = "block";
   document.querySelector("#pedidoFormCard .btn-save").textContent = "Salvar Edição";
+  setTimeout(() => {
+    document.getElementById("pedidoFormCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 80);
 }
 function formatDataEntrega(iso) {
   if (!iso) return "";
@@ -3104,12 +3750,21 @@ function renderPedidos() {
     g.itens.forEach(p => {
       const div = document.createElement("div");
       div.className = "hist-item";
-      div.innerHTML = `<div class="hist-body" style="cursor:default">
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap">
-            <span class="hist-medidas" style="flex-shrink:0"><span style="font-size:var(--fs-medida);font-weight:900;color:var(--text)">${p.qtd}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900">${p.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span></span>
-            <span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${p.tipo || ""}</span>
-          </div>
-        </div>`;
+      if (p.obs) {
+        // Observação livre
+        div.innerHTML = `<div class="hist-body" style="cursor:default">
+            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+              <span style="font-size:var(--fs-nome);font-weight:700;color:var(--text);flex:1;word-break:break-word">📝 ${p.tipo || ""}</span>
+            </div>
+          </div>`;
+      } else {
+        div.innerHTML = `<div class="hist-body" style="cursor:default">
+            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap">
+              <span class="hist-medidas" style="flex-shrink:0"><span style="font-size:var(--fs-medida);font-weight:900;color:var(--text)">${p.qtd}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900">${p.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span></span>
+              <span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${p.tipo || ""}</span>
+            </div>
+          </div>`;
+      }
       itemsList.appendChild(div);
     });
     list.appendChild(card);
@@ -3119,7 +3774,24 @@ function adicionarPedido() {
   const cliente = document.getElementById("pedCliente").value.trim();
   const tipo = document.getElementById("pedTipo").value.trim();
   const dataEntrega = document.getElementById("pedDataEntrega").value;
-  if (!cliente) return;
+  if (!cliente) {
+    // Garante que os campos extras estão visíveis
+    desativarModoItensPedido();
+    const inp = document.getElementById("pedCliente");
+    inp.style.borderColor = "var(--danger)";
+    inp.style.boxShadow = "0 0 0 3px #e0505044";
+    inp.placeholder = "⚠️ Nome do cliente obrigatório!";
+    setTimeout(() => {
+      inp.focus();
+      inp.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    setTimeout(() => {
+      inp.style.borderColor = "";
+      inp.style.boxShadow = "";
+      inp.placeholder = "Nome do cliente…";
+    }, 3000);
+    return;
+  }
   if (editandoPedidoGroup) {
     pedidos = pedidos.filter(p => !(p.cliente === editandoPedidoGroup.cliente && (p.dataEntrega || "") === editandoPedidoGroup.dataEntrega));
   }
@@ -3128,17 +3800,21 @@ function adicionarPedido() {
   let count = 0;
   const linhas = document.getElementById("pedItens").value.split("\n");
   linhas.forEach(linha => {
-    const m = linha.match(/^\s*(\d+)\s*\|\s*(\d+)\s*(?:cm)?\s*(.*)$/i);
-    if (!m) return;
-    const qtd = Number(m[1]);
-    const largura = m[2];
-    const nomeLinha = (m[3] || "").trim();
-    if (qtd > 0 && largura) {
-      // Ao editar, se o campo "Tipo / Modelo" estiver preenchido, ele vale
-      // para todos os itens (renomear em lote). Em pedidos novos, o nome
-      // de cada linha tem prioridade e "Tipo / Modelo" é só um fallback.
-      const nomeFinal = (editandoPedidoGroup && tipo) ? tipo : (nomeLinha || tipo);
-      pedidos.push({ id: agora + count, cliente, tipo: nomeFinal, qtd, largura, data: dataStr, dataEntrega });
+    const linhaTrim = linha.trim();
+    if (!linhaTrim) return;
+    const m = linhaTrim.match(/^\s*(\d+)\s*[|\/\\]\s*(\d+)\s*(?:cm)?\s*(.*)$/i);
+    if (m) {
+      const qtd = Number(m[1]);
+      const largura = m[2];
+      const nomeLinha = (m[3] || "").trim();
+      if (qtd > 0 && largura) {
+        const nomeFinal = (editandoPedidoGroup && tipo) ? tipo : (nomeLinha || tipo);
+        pedidos.push({ id: agora + count, cliente, tipo: nomeFinal, qtd, largura, data: dataStr, dataEntrega });
+        count++;
+      }
+    } else {
+      // Linha sem formato — salva como observação
+      pedidos.push({ id: agora + count, cliente, tipo: linhaTrim, qtd: 0, largura: "", obs: true, data: dataStr, dataEntrega });
       count++;
     }
   });
@@ -3190,7 +3866,7 @@ function cloudPush(){
     try {
       const { db, doc, setDoc, serverTimestamp } = window.fb;
       await setDoc(doc(db, "estoques", workspaceId), {
-        marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos,
+        marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos, reservas,
         updatedAt: serverTimestamp()
       }, { merge: true });
       setSyncStatus("online");
@@ -3221,6 +3897,7 @@ function cloudSubscribe(){
     if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
     if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
     if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
+    if (Array.isArray(data.reservas)) reservas = data.reservas;
     // cache local
     localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
     localStorage.setItem("items",       JSON.stringify(items));
@@ -3229,6 +3906,7 @@ function cloudSubscribe(){
     localStorage.setItem("pedidos",     JSON.stringify(pedidos));
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
     localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
+    localStorage.setItem("reservas", JSON.stringify(reservas));
     cloudApplyingRemote = false;
     setSyncStatus("online");
     // re-render do que estiver visível
@@ -3242,7 +3920,7 @@ function cloudSubscribe(){
 
 // ============ TELA DE SETUP ============
 function mostrarSetup(){
-  carregarDados(); carregarSaidas(); // carrega cache local pra detectar dados existentes
+  carregarDados(); carregarSaidas(); carregarReservas(); // carrega cache local pra detectar dados existentes
   const temDadosLocais = (items && items.length > 0) || (saidas && saidas.length > 0) || (lembretes && Object.keys(lembretes).length > 0) || (pedidos && pedidos.length > 0);
   document.getElementById("setupMigrarBox").style.display = temDadosLocais ? "block" : "none";
   document.getElementById("setupOverlay").classList.add("show");
@@ -3256,7 +3934,7 @@ async function setupCriarEstoque(){
 
 async function setupMigrarLocal(){
   // cria estoque usando dados locais existentes
-  await criarWorkspace({ marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos });
+  await criarWorkspace({ marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos, reservas });
 }
 
 async function criarWorkspace(estadoInicial){
@@ -3274,6 +3952,7 @@ async function criarWorkspace(estadoInicial){
     pedidos = estadoInicial.pedidos || [];
     saidasHistorico = estadoInicial.saidasHistorico || [];
     saidaPrecos = estadoInicial.saidaPrecos || {};
+    reservas = estadoInicial.reservas || [];
     localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
     localStorage.setItem("items",       JSON.stringify(items));
     localStorage.setItem("lembretes",   JSON.stringify(lembretes));
@@ -3281,6 +3960,7 @@ async function criarWorkspace(estadoInicial){
     localStorage.setItem("pedidos",     JSON.stringify(pedidos));
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
     localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
+    localStorage.setItem("reservas", JSON.stringify(reservas));
     fecharSetup();
     abrirQRCode(codigo, true);
     cloudSubscribe();
@@ -3371,11 +4051,115 @@ function trocarEstoque(){
 }
 
 // ============ INICIALIZAÇÃO ============
+function abrirConfigMarc(id, nome) {
+  document.getElementById("configMarcNome").textContent = nome;
+  document.getElementById("configMarcOverlay").style.display = "block";
+  const panel = document.getElementById("configMarcPanel");
+  panel.style.display = "flex";
+  setTimeout(() => panel.style.transform = "translateY(0)", 10);
+  document.getElementById("configMarcBtnEditar").onclick = () => { fecharConfigMarc(); setTimeout(() => editarMarceneiro(id), 260); };
+  document.getElementById("configMarcBtnExcluir").onclick = () => { fecharConfigMarc(); setTimeout(() => abrirDeleteMarceneiro(id, nome), 260); };
+}
+function fecharConfigMarc() {
+  const panel = document.getElementById("configMarcPanel");
+  panel.style.transform = "translateY(100%)";
+  setTimeout(() => { panel.style.display = "none"; document.getElementById("configMarcOverlay").style.display = "none"; }, 250);
+}
+
+// Listener global permanente para painel de cm
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    const ta = document.getElementById("pedItens");
+    const painel = document.getElementById("painelCmFixed");
+    if (!ta || !painel) return;
+    const vv = window.visualViewport;
+    const tecladoAberto = window.innerHeight - vv.height > 100;
+    const taFocado = (document.activeElement === ta);
+    if (tecladoAberto && taFocado) {
+      const bottom = window.innerHeight - vv.height - vv.offsetTop;
+      painel.style.bottom = Math.max(0, bottom) + "px";
+      painel.style.display = "block";
+    } else {
+      painel.style.display = "none";
+    }
+  });
+}
+
+function _abrirMenuReservaTudo(m, cliente, itens) {
+  const nomeLabel = cliente || "sem cliente";
+  document.getElementById("reservaTudoNome").textContent = `👤 ${nomeLabel}`;
+  document.getElementById("reservaTudoOverlay").style.display = "block";
+  const panel = document.getElementById("reservaTudoPanel");
+  panel.style.display = "flex";
+  setTimeout(() => panel.style.transform = "translateY(0)", 10);
+
+  document.getElementById("reservaTudoBtnEstoque").onclick = () => {
+    _fecharMenuReservaTudo();
+    _pedirConfirmacao(`Retornar tudo de ${nomeLabel} ao estoque?`, () => {
+      itens.forEach(it => {
+        const allIds = new Set(it.ids);
+        const item = items.find(i => (it.itemId && i.id === it.itemId) || (i.marceneiroId === m.id && _nomeItemCategoria(i).toLowerCase() === it.nome.toLowerCase() && String(i.largura) === String(it.largura)));
+        if (item) item.qtd = Number(item.qtd) + it.qtd;
+        reservas = reservas.filter(r => !allIds.has(r.id));
+      });
+      salvarDados(); salvarReservas(); renderHistorico(); renderHome(); renderReserva();
+    }, "Retornar", "linear-gradient(135deg,#2a9a50,#1a7038)");
+  };
+
+  document.getElementById("reservaTudoBtnSaida").onclick = () => {
+    _fecharMenuReservaTudo();
+    const saidasAntigas = saidas.filter(s => s.marceneiroId === m.id);
+    const executarEnvio = () => {
+      itens.forEach(it => {
+        const allIds = new Set(it.ids);
+        registrarSaida(m.id, it.nome, it.largura, it.qtd, it.categoria || "porta", it.itemId);
+        const item = items.find(i => (it.itemId && i.id === it.itemId) || (i.marceneiroId === m.id && _nomeItemCategoria(i).toLowerCase() === it.nome.toLowerCase() && String(i.largura) === String(it.largura)));
+        if (item) item.qtd = Math.max(0, Number(item.qtd) - it.qtd);
+        reservas = reservas.filter(r => !allIds.has(r.id));
+      });
+      salvarDados(); salvarSaidas(); salvarReservas(); renderHistorico(); renderHome(); renderReserva(); atualizarBtnSaidas();
+    };
+    if (saidasAntigas.length) {
+      const datas = [...new Set(saidasAntigas.map(s => s.data))];
+      const total = saidasAntigas.reduce((a, s) => a + Number(s.qtd), 0);
+      const dataLabel = datas.length === 1
+        ? `Há <b style="color:var(--accent)">${total} un</b> em saídas do dia <b style="color:var(--accent)">${datas[0]}</b> ainda na caixa.<br>O que deseja fazer?`
+        : `Há <b style="color:var(--accent)">${total} un</b> em saídas dos dias <b style="color:var(--accent)">${datas.join(", ")}</b> ainda na caixa.<br>O que deseja fazer?`;
+      document.getElementById("novoCarrInfo").innerHTML = dataLabel;
+      document.getElementById("novoCarrOverlay").style.display = "block";
+      const panel = document.getElementById("novoCarrPanel");
+      panel.style.display = "flex";
+      setTimeout(() => panel.style.transform = "translateY(0)", 10);
+      _novoCarrCallbacks = {
+        iniciar: () => {
+          saidas = saidas.filter(s => s.marceneiroId !== m.id);
+          const inpMot = document.getElementById("inputMotorista");
+          if (inpMot) inpMot.value = "";
+          salvarSaidas();
+          executarEnvio();
+        },
+        adicionar: executarEnvio
+      };
+    } else {
+      executarEnvio();
+    }
+  };
+}
+function _fecharMenuReservaTudo() {
+  const panel = document.getElementById("reservaTudoPanel");
+  panel.style.transform = "translateY(100%)";
+  setTimeout(() => {
+    panel.style.display = "none";
+    document.getElementById("reservaTudoOverlay").style.display = "none";
+  }, 250);
+}
+
 window.addEventListener("fb-ready", () => {
+  const workspaceId = localStorage.getItem("workspaceId");
   if (workspaceId){
     cloudReady = true;
     // carrega cache local primeiro (render instantâneo), depois assina nuvem
-    carregarDados(); carregarSaidas(); renderHome(); atualizarBtnPedidos();
+    carregarDados(); carregarSaidas(); carregarReservas(); renderHome(); atualizarBtnPedidos();
     cloudSubscribe();
   } else {
     mostrarSetup();
@@ -3385,11 +4169,30 @@ window.addEventListener("fb-ready", () => {
 // Fallback: se o Firebase não estiver disponível, abre o app no modo local
 setTimeout(() => {
   if (!window.fb){
-    if (workspaceId){ carregarDados(); carregarSaidas(); renderHome(); atualizarBtnPedidos(); setSyncStatus("offline"); }
+    if (workspaceId){ carregarDados(); carregarSaidas(); carregarReservas(); renderHome(); atualizarBtnPedidos(); setSyncStatus("offline"); }
     else { mostrarSetup(); }
   }
 }, 3000);
 
 </script>
+<!-- MENU RESERVA TUDO -->
+<div id="reservaTudoOverlay" onclick="_fecharMenuReservaTudo()" style="position:fixed;inset:0;z-index:499;display:none;background:#00000066"></div>
+<div id="reservaTudoPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:10px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease">
+  <div id="reservaTudoNome" style="font-size:16px;color:#c8a96e;font-weight:bold;text-align:center;margin-bottom:4px"></div>
+  <button id="reservaTudoBtnSaida" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">📤 Enviar para caixa de saída</button>
+  <button id="reservaTudoBtnEstoque" style="background:linear-gradient(135deg,#2a9a50,#1a7038);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">↩ Retornar ao estoque</button>
+  <button onclick="_fecharMenuReservaTudo()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+</div>
+<!-- BLOQUEADOR DE TOQUE pós-teclado -->
+<div id="touchBlocker" style="position:fixed;inset:0;z-index:9999;display:none"></div>
+<!-- MENU CONFIG MARCENEIRO -->
+<div id="configMarcOverlay" onclick="fecharConfigMarc()" style="position:fixed;inset:0;z-index:499;display:none;background:#00000066"></div>
+<div id="configMarcPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:500;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:10px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease">
+  <div id="configMarcNome" style="font-size:17px;color:var(--text);font-weight:bold;text-align:center;margin-bottom:4px"></div>
+  <button id="configMarcBtnEditar" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">✏️ Editar nome</button>
+  <button id="configMarcBtnExcluir" style="background:linear-gradient(135deg,#e05050,#a02020);color:#fff;border:none;border-radius:12px;padding:15px;font-size:16px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">🗑 Excluir marceneiro</button>
+  <button onclick="fecharConfigMarc()" style="background:transparent;color:var(--text);border:1px solid var(--border2);border-radius:12px;padding:13px;font-size:15px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">Cancelar</button>
+</div>
+
 </body>
 </html>
