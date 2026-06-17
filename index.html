@@ -541,8 +541,20 @@
     </div>
     <button onclick="fecharReserva()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:20px;cursor:pointer;padding:2px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;line-height:1;font-weight:bold">✕</button>
   </div>
-  <div style="padding:6px 14px 0;border-bottom:1px solid var(--border)">
-    <input id="inputReservaCliente" placeholder="Cliente / Observação…" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border2);border-radius:0;padding:6px 4px;color:var(--text);font-size:13px;font-family:Georgia,serif;outline:none;margin-bottom:6px"/>
+  <div id="reservaClienteBar" style="padding:6px 14px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+    <button onclick="abrirBuscaClienteReserva()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:10px;padding:6px 12px;font-size:18px;cursor:pointer;flex-shrink:0" title="Buscar cliente">🔍</button>
+    <span id="reservaClienteSelecionado" style="font-size:14px;color:var(--accent);font-weight:bold;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button id="btnLimparClienteReserva" onclick="limparClienteReserva()" style="display:none;background:transparent;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px" title="Limpar cliente">✕</button>
+  </div>
+  <!-- Modal busca cliente reserva -->
+  <div id="buscaClienteReservaOverlay" onclick="fecharBuscaClienteReserva()" style="display:none;position:fixed;inset:0;z-index:400;background:#00000060"></div>
+  <div id="buscaClienteReservaModal" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:401;background:var(--bg2);border-radius:20px 20px 0 0;padding:16px 16px 36px;box-shadow:0 -8px 40px #00000070;max-height:70vh;overflow-y:auto">
+    <div style="font-size:13px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Cliente</div>
+    <div style="position:relative;margin-bottom:12px">
+      <input id="inputBuscaClienteReserva" placeholder="Digitar nome…" autocomplete="off" oninput="filtrarClientesReserva()" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:10px;padding:10px 36px 10px 14px;color:var(--text);font-size:15px;font-family:Georgia,serif;outline:none"/>
+      <button onclick="confirmarDigitacaoClienteReserva()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--accent);border:none;color:#1a1610;border-radius:8px;padding:4px 10px;font-size:13px;font-weight:bold;cursor:pointer;font-family:Georgia,serif">OK</button>
+    </div>
+    <div id="listaClientesReservaModal" style="display:flex;flex-direction:column;gap:8px"></div>
   </div>
   <div class="saidas-list" id="reservaList"></div>
   <div class="saidas-footer">
@@ -1018,6 +1030,7 @@ function renderHistorico(){
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <div class="hist-title" style="margin:0">Lançamentos${filtroInfo}</div>
       <button onclick="alternarModoOrdem()" style="background:transparent;border:1px solid var(--border2);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Georgia,serif;line-height:1;letter-spacing:.5px">${modoManual ? '✋ Manual' : '↕ Auto'}</button>
+      <button onclick="cloudPull().then(()=>renderHistorico())" title="Atualizar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
     </div>
     <div style="display:flex;align-items:center;gap:6px;padding-right:28px"><span style="font-size:11px;color:var(--text2);letter-spacing:1px">TOTAL</span><span style="font-size:22px;font-weight:900;color:var(--accent)">${totalQtd}</span><span style="font-size:12px;color:var(--text2)">un</span></div>
   </div>
@@ -1488,6 +1501,51 @@ function registrarReserva(marceneiroId, nome, largura, qtd, categoria, itemId, c
   salvarReservas();
 }
 
+function _getClientesReserva() {
+  return [...new Set(reservas.filter(r => r.cliente).map(r => r.cliente))];
+}
+function abrirBuscaClienteReserva() {
+  const overlay = document.getElementById("buscaClienteReservaOverlay");
+  const modal = document.getElementById("buscaClienteReservaModal");
+  const input = document.getElementById("inputBuscaClienteReserva");
+  overlay.style.display = "block";
+  modal.style.display = "block";
+  input.value = "";
+  filtrarClientesReserva();
+  setTimeout(() => input.focus(), 100);
+}
+function fecharBuscaClienteReserva() {
+  document.getElementById("buscaClienteReservaOverlay").style.display = "none";
+  document.getElementById("buscaClienteReservaModal").style.display = "none";
+}
+function filtrarClientesReserva() {
+  const q = (document.getElementById("inputBuscaClienteReserva").value || "").toLowerCase();
+  const lista = document.getElementById("listaClientesReservaModal");
+  const clientes = _getClientesReserva().filter(c => !q || c.toLowerCase().includes(q));
+  lista.innerHTML = "";
+  clientes.forEach(cli => {
+    const btn = document.createElement("button");
+    btn.style.cssText = "background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:12px;padding:12px 16px;font-size:15px;font-family:Georgia,serif;cursor:pointer;text-align:left;font-weight:bold;width:100%";
+    btn.textContent = "👤 " + cli;
+    btn.addEventListener("click", () => { selecionarClienteReserva(cli); });
+    lista.appendChild(btn);
+  });
+}
+function selecionarClienteReserva(nome) {
+  fecharBuscaClienteReserva();
+  document.getElementById("reservaClienteSelecionado").textContent = nome;
+  document.getElementById("btnLimparClienteReserva").style.display = "inline-block";
+}
+function confirmarDigitacaoClienteReserva() {
+  const val = (document.getElementById("inputBuscaClienteReserva").value || "").trim();
+  if (val) selecionarClienteReserva(val);
+  else fecharBuscaClienteReserva();
+}
+function limparClienteReserva() {
+  document.getElementById("reservaClienteSelecionado").textContent = "";
+  document.getElementById("btnLimparClienteReserva").style.display = "none";
+}
+
 function abrirReserva() {
   const m = getMarceneiro(); if (!m) return;
   document.getElementById("reservaNomeLabel").textContent = m.nome;
@@ -1518,12 +1576,13 @@ function renderReserva() {
     const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : r.nome;
     const cli = r.cliente || "__sem_cliente__";
     if (!porCliente[cli]) porCliente[cli] = { cliente: r.cliente || "", itens: {} };
+    const cat = (itemAtual ? itemAtual.categoria : r.categoria) || "porta";
     const chave = nomeAtual + "||" + r.largura;
     if (porCliente[cli].itens[chave]) {
       porCliente[cli].itens[chave].qtd += Number(r.qtd);
       porCliente[cli].itens[chave].ids.push(r.id);
     } else {
-      porCliente[cli].itens[chave] = { nome: nomeAtual, largura: r.largura, qtd: Number(r.qtd), itemId: r.itemId, ids: [r.id] };
+      porCliente[cli].itens[chave] = { nome: nomeAtual, largura: r.largura, qtd: Number(r.qtd), itemId: r.itemId, ids: [r.id], categoria: cat };
     }
   });
 
@@ -1571,24 +1630,41 @@ function renderReserva() {
       chevron.style.transform = aberto ? "" : "rotate(90deg)";
     });
 
-    // Itens do cliente
+    // Itens do cliente agrupados por categoria
+    const ordemCat = ["porta", "janela", "outro"];
+    const porCat = {};
     itens.forEach(it => {
-      const row = document.createElement("div");
-      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px";
-      row.innerHTML = `
-        <div style="display:flex;align-items:center;gap:0">
-          <span style="font-size:17px;font-weight:900">${it.qtd}</span>
-          <span style="font-size:12px;font-weight:300;color:var(--text2);margin:0 4px">|</span>
-          <span style="font-size:17px;font-weight:900;color:#c8a96e">${it.largura}</span><span style="font-size:10px;color:#c8a96e;margin-right:6px">cm</span>
-          <span style="font-size:13px;font-weight:700;color:var(--text)">${it.nome}</span>
-        </div>
-        <button class="reserva-retornar-item-btn" style="background:transparent;border:1px solid #2a9a5044;color:#2a9a50;font-size:15px;font-weight:bold;cursor:pointer;padding:4px 10px;border-radius:8px;flex-shrink:0;font-family:Georgia,serif" title="Retornar ao estoque">↩</button>`;
-      const btnItem = row.querySelector(".reserva-retornar-item-btn");
-      btnItem.addEventListener("click", e => {
-        e.stopPropagation();
-        retornarReservaEstoque(it.nome, it.largura, it.itemId);
+      const c = it.categoria || "porta";
+      if (!porCat[c]) porCat[c] = [];
+      porCat[c].push(it);
+    });
+    const cats = ordemCat.filter(c => porCat[c]);
+    cats.forEach((cat, ci) => {
+      // Separador de categoria (só se tiver mais de 1 categoria)
+      if (cats.length > 1) {
+        const sep = document.createElement("div");
+        sep.style.cssText = `display:flex;align-items:center;gap:6px;padding:${ci===0?'4px':'10px'} 0 4px`;
+        sep.innerHTML = `<span style="font-size:12px">${_emojiCategoria(cat)}</span><span style="font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;font-weight:bold">${cat==='porta'?'Portas':cat==='janela'?'Janelas':'Outros'}</span><div style="flex:1;height:1px;background:var(--border)"></div>`;
+        corpo.appendChild(sep);
+      }
+      porCat[cat].forEach(it => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px";
+        row.innerHTML = `
+          <div style="display:flex;align-items:center;gap:0">
+            <span style="font-size:19px;font-weight:900">${it.qtd}</span>
+            <span style="font-size:13px;font-weight:300;color:var(--text2);margin:0 5px">|</span>
+            <span style="font-size:19px;font-weight:900;color:#c8a96e">${it.largura}</span><span style="font-size:11px;color:#c8a96e;margin-right:6px">cm</span>
+            <span style="font-size:14px;font-weight:700;color:var(--text)">${it.nome}</span>
+          </div>
+          <button class="reserva-retornar-item-btn" style="background:transparent;border:1px solid #2a9a5044;color:#2a9a50;font-size:15px;font-weight:bold;cursor:pointer;padding:4px 10px;border-radius:8px;flex-shrink:0;font-family:Georgia,serif" title="Retornar ao estoque">↩</button>`;
+        const btnItem = row.querySelector(".reserva-retornar-item-btn");
+        btnItem.addEventListener("click", e => {
+          e.stopPropagation();
+          retornarReservaEstoque(it.nome, it.largura, it.itemId);
+        });
+        corpo.appendChild(row);
       });
-      corpo.appendChild(row);
     });
 
     div.appendChild(corpo);
@@ -1677,7 +1753,7 @@ function compartilharReservaTexto() {
   const m = getMarceneiro(); if (!m) return;
   const raw = reservas.filter(r => r.marceneiroId === m.id);
   if (!raw.length) return;
-  const cliente = (document.getElementById("inputReservaCliente")?.value || "").trim();
+  const cliente = (document.getElementById("reservaClienteSelecionado")?.textContent || "").trim();
   const hoje = new Date().toLocaleDateString("pt-BR");
   const grupos = {};
   raw.forEach(r => {
@@ -1834,18 +1910,25 @@ function renderSaidas() {
   const speciesLastIndex = {};
   raw.forEach((s, i) => {
     const k = (s.nome || "").toLowerCase().trim();
-    speciesLastIndex[k] = i; // guarda o índice da última aparição da espécie
+    speciesLastIndex[k] = i;
   });
   const agrupados = Object.values(grupos).sort((a, b) => {
     const ka = (a.nome || "").toLowerCase().trim();
     const kb = (b.nome || "").toLowerCase().trim();
-    if (ka !== kb) {
-      // espécie usada mais recentemente fica em cima
-      return (speciesLastIndex[kb] ?? 0) - (speciesLastIndex[ka] ?? 0);
-    }
-    // dentro da mesma espécie: cm maior primeiro
+    if (ka !== kb) return (speciesLastIndex[kb] ?? 0) - (speciesLastIndex[ka] ?? 0);
     return Number(b.largura) - Number(a.largura);
   });
+
+  // Separar por categoria
+  const ordemCatS = ["porta", "janela", "outro"];
+  const porCatS = {};
+  agrupados.forEach(s => {
+    const cat = s.categoria || "porta";
+    if (!porCatS[cat]) porCatS[cat] = [];
+    porCatS[cat].push(s);
+  });
+  const catsPresentes = ordemCatS.filter(c => porCatS[c]);
+  const temMultiCat = catsPresentes.length > 1;
 
   list.innerHTML = "";
   let lastSpeciesKey = null;
@@ -1858,17 +1941,26 @@ function renderSaidas() {
     const sub = document.createElement("div");
     sub.className = "saida-subtotal";
     sub.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;padding:4px 12px 10px 12px;margin:2px 0 8px;border-bottom:1px dashed var(--border2)";
-
-    // Linha do total
     const totalLine = document.createElement("div");
     totalLine.style.cssText = "display:flex;align-items:center;gap:5px";
     totalLine.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px;text-transform:uppercase">Total</span><span style="display:inline-flex;align-items:baseline;gap:1px"><span style="font-size:18px;font-weight:900;color:var(--accent)">${speciesAcc}</span><span style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase">un</span></span>`;
     sub.appendChild(totalLine);
-
     list.appendChild(sub);
   }
 
-  agrupados.forEach((s, idx) => {
+  catsPresentes.forEach((cat, ci) => {
+    // Cabeçalho de categoria (só se houver mais de uma)
+    if (temMultiCat) {
+      const catHeader = document.createElement("div");
+      catHeader.style.cssText = `display:flex;align-items:center;gap:6px;padding:${ci===0?'4px':'12px'} 4px 6px`;
+      catHeader.innerHTML = `<span style="font-size:13px">${_emojiCategoria(cat)}</span><span style="font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;font-weight:bold">${cat==='porta'?'Portas':cat==='janela'?'Janelas':'Outros'}</span><div style="flex:1;height:1px;background:var(--border2)"></div>`;
+      list.appendChild(catHeader);
+      lastSpeciesKey = null;
+      speciesAcc = 0;
+      speciesItems = [];
+    }
+
+    porCatS[cat].forEach((s, idx) => {
     const speciesKey = (s.nome || "").toLowerCase().trim();
     if (lastSpeciesKey !== null && lastSpeciesKey !== speciesKey) {
       appendSubtotal();
@@ -1913,9 +2005,13 @@ function renderSaidas() {
     tapArea.addEventListener("click", handleTap);
 
     list.appendChild(div);
+    });
+    // Subtotal da última espécie do grupo de categoria
+    appendSubtotal();
+    lastSpeciesKey = null;
+    speciesAcc = 0;
+    speciesItems = [];
   });
-  // Subtotal da última espécie
-  appendSubtotal();
 
   // Total geral
   const totalSaidas = agrupados.reduce((a,s) => a + Number(s.qtd), 0);
@@ -2112,16 +2208,7 @@ function _pedirNomeReserva(nome, largura, callback) {
     listaEl.appendChild(div);
   }
 
-  const semNome = document.createElement("button");
-  semNome.style.cssText = "background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:12px;padding:13px 18px;font-size:14px;font-family:Georgia,serif;cursor:pointer;text-align:left";
-  semNome.textContent = "Sem cliente";
-  semNome.addEventListener("click", () => {
-    const cb = _reservaNomeCallback;
-    _reservaNomeCallback = null;
-    fecharNomeReserva();
-    setTimeout(() => cb(""), 260);
-  });
-  listaEl.appendChild(semNome);
+
 
   document.getElementById("reservaNomeOverlay").style.display = "block";
   const panel = document.getElementById("reservaNomePanel");
@@ -2582,8 +2669,7 @@ function _montarTextoSaidas(m, mSaidas, opts) {
   linhas.push(`_${hoje}_`);
   if (motorista) linhas.push(`*Motorista:* ${motorista}`);
   linhas.push("");
-  linhas.push(`*TOTAL: ${total} un*`);
-  linhas.push("");
+  if (total > 0) { linhas.push(`*TOTAL: ${total} un*`); linhas.push(""); }
 
   const FIG = "\u2007"; // figure space
   const maxQtd = Math.max(...blocos.flatMap(b => b.itens).map(i => String(i.qtd).length));
@@ -2664,6 +2750,7 @@ function _montarTextoPedido(cliente, dataEntrega, itens) {
   linhas.push(`*📋 PEDIDO — ${cliente.toUpperCase()}*`);
   if (dataFmt) linhas.push(`_Entrega: ${diaSem}, ${dataFmt}_`);
   linhas.push("");
+  if (total > 0) { linhas.push(`*TOTAL: ${total} un*`); linhas.push(""); }
 
   const FIG = "\u2007";
   const maxQtd = Math.max(...blocos.flatMap(b => b.itens).map(i => String(i.qtd).length));
@@ -2675,13 +2762,13 @@ function _montarTextoPedido(cliente, dataEntrega, itens) {
       const pad = FIG.repeat(maxQtd - q.length);
       linhas.push(`${pad}${_toBoldDigits(q)} | ${it.largura}cm  ${nome}`);
     });
-    if (b.itens.length > 1) linhas.push(`*TOTAL ${b.sub}un*`);
+    if (blocos.length > 1) linhas.push(`Total ${b.sub} un`);
     linhas.push("");
   });
 
   if (obsItens.length) {
-    linhas.push("");
     obsItens.forEach(o => linhas.push(`📝 ${o.tipo || ""}`));
+    linhas.push("");
   }
   linhas.push("_estoque de portas jl_");
   return linhas.join("\n");
@@ -2745,17 +2832,18 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
   ctx.fillText(cliente.toUpperCase(), MGEM + prefW, 52);
   ctx.fillStyle = '#1a1610';
 
+  ctx.font = 'bold 32px monospace';
+  ctx.fillStyle = '#3a7bd5';
+  ctx.textAlign = 'left';
   if (dataFmt) {
-    ctx.font = 'bold 32px monospace';
-    ctx.fillStyle = '#3a7bd5';
-    ctx.textAlign = 'left';
     const entregaTxt = `Entrega: ${diaSem}, ${dataFmt}`;
     ctx.fillText(entregaTxt, MGEM, 96);
-    ctx.fillStyle = '#1a1610';
+    const entregaW = ctx.measureText(entregaTxt).width;
+    if (total > 0) ctx.fillText(`TOTAL: ${total} un`, MGEM + entregaW + 40, 96);
   } else {
-    ctx.fillStyle = '#1a1610';
-    ctx.textAlign = 'left';
+    if (total > 0) ctx.fillText(`TOTAL: ${total} un`, MGEM, 96);
   }
+  ctx.fillStyle = '#1a1610';
 
   ctx.strokeStyle = '#cccccc';
   ctx.lineWidth = 1;
@@ -2818,6 +2906,12 @@ function _gerarCanvasPedido(cliente, dataEntrega, itens) {
       });
     });
   }
+
+
+
+
+
+
 
   ctx.font = 'bold 20px monospace';
   ctx.fillStyle = '#d4763b';
@@ -2901,9 +2995,28 @@ function compartilharEstoqueTexto() {
   _enviarTexto(_montarTextoEstoque(m, itens, { busca: filtroBusca, categoria: filtroCategoria }));
 }
 
+function _validarMotorista() {
+  const inp = document.getElementById("inputMotorista");
+  const val = (inp?.value || "").trim();
+  if (!val) {
+    inp.style.borderBottomColor = "var(--danger)";
+    inp.style.boxShadow = "0 2px 0 0 #e0505088";
+    inp.placeholder = "⚠️ Informe o motorista!";
+    inp.focus();
+    setTimeout(() => {
+      inp.style.borderBottomColor = "";
+      inp.style.boxShadow = "";
+      inp.placeholder = "Motorista…";
+    }, 3000);
+    return false;
+  }
+  return true;
+}
+
 function compartilharSaidasTexto() {
   const m = getMarceneiro();
   if (!m) return;
+  if (!_validarMotorista()) return;
   const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
   if (!mSaidas.length) { alert("Nenhuma saída registrada."); return; }
   _enviarTexto(_montarTextoSaidas(m, mSaidas));
@@ -3080,6 +3193,7 @@ function _gerarCanvasSaidas(m, mSaidas, opts) {
 function compartilharSaidasPNG(btnEl) {
   const m = getMarceneiro();
   if (!m) return;
+  if (!_validarMotorista()) return;
   const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
   if (!mSaidas.length) { alert("Nenhuma saída registrada."); return; }
   const canvas = _gerarCanvasSaidas(m, mSaidas);
@@ -3713,58 +3827,58 @@ function renderPedidos() {
     card.style.cssText = "border:1px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--card-bg)";
     const dataFmt = formatDataEntrega(g.dataEntrega);
     const diaSem = diaSemanaEntrega(g.dataEntrega);
-    card.innerHTML = `<div class="pedido-card-header" style="margin-bottom:10px;cursor:pointer;user-select:none;-webkit-user-select:none">
+    card.innerHTML = `<div class="pedido-card-header" style="margin-bottom:10px;user-select:none;-webkit-user-select:none">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
           <span style="font-size:17px;font-weight:bold;color:var(--text)">${g.cliente}</span>
           <div style="display:flex;gap:6px;flex-shrink:0">
             <button class="btn-png-pedido" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">🖼️</button>
             <button class="btn-zap-pedido" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">💬</button>
+            <button class="btn-cfg-pedido" title="Opções" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">⚙️</button>
           </div>
         </div>
         ${dataFmt ? `<div style="font-size:15px;font-weight:bold;color:var(--accent);letter-spacing:1px;margin-top:4px">ENTREGA: ${diaSem}, ${dataFmt}</div>` : ""}
       </div>
       <div class="hist-list"></div>`;
-    const header = card.querySelector(".pedido-card-header");
     const zapBtn = card.querySelector(".btn-zap-pedido");
     const pngBtn = card.querySelector(".btn-png-pedido");
+    const cfgBtn = card.querySelector(".btn-cfg-pedido");
+    const labelMenu = g.cliente + (dataFmt ? "  ·  Entrega: " + dataFmt : "");
     zapBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoTexto(g.cliente, g.dataEntrega); });
     pngBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoPNG(g.cliente, g.dataEntrega, pngBtn); });
-    const labelMenu = g.cliente + (dataFmt ? "  ·  Entrega: " + dataFmt : "");
-    let lastTapCard = 0;
-    header.addEventListener("touchend", e => {
-      if (e.target.closest(".btn-zap-pedido") || e.target.closest(".btn-png-pedido")) return;
-      const now = Date.now();
-      if (now - lastTapCard < 350) {
-        e.preventDefault();
-        abrirPedidoMenu(g.cliente, g.dataEntrega, labelMenu);
-        lastTapCard = 0;
-      } else {
-        lastTapCard = now;
-      }
-    }, { passive: false });
-    header.addEventListener("dblclick", e => {
-      if (e.target.closest(".btn-zap-pedido") || e.target.closest(".btn-png-pedido")) return;
-      abrirPedidoMenu(g.cliente, g.dataEntrega, labelMenu);
-    });
+    cfgBtn.addEventListener("click", e => { e.stopPropagation(); abrirPedidoMenu(g.cliente, g.dataEntrega, labelMenu); });
     const itemsList = card.querySelector(".hist-list");
-    g.itens.forEach(p => {
-      const div = document.createElement("div");
-      div.className = "hist-item";
-      if (p.obs) {
-        // Observação livre
-        div.innerHTML = `<div class="hist-body" style="cursor:default">
-            <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-              <span style="font-size:var(--fs-nome);font-weight:700;color:var(--text);flex:1;word-break:break-word">📝 ${p.tipo || ""}</span>
-            </div>
-          </div>`;
-      } else {
+
+    // Agrupar itens normais por nome para mostrar TOTAL por tipo
+    const { blocos: blocosRender, obsItens: obsRender } = _prepararBlocosPedido(g.cliente, g.dataEntrega, g.itens);
+
+    blocosRender.forEach(b => {
+      b.itens.forEach(it => {
+        const div = document.createElement("div");
+        div.className = "hist-item";
         div.innerHTML = `<div class="hist-body" style="cursor:default">
             <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap">
-              <span class="hist-medidas" style="flex-shrink:0"><span style="font-size:var(--fs-medida);font-weight:900;color:var(--text)">${p.qtd}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900">${p.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span></span>
-              <span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${p.tipo || ""}</span>
+              <span class="hist-medidas" style="flex-shrink:0"><span style="font-size:var(--fs-medida);font-weight:900;color:var(--text)">${it.qtd}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900">${it.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span></span>
+              <span class="hist-nome" style="flex:1;min-width:120px;word-break:break-word">${it.tipo || ""}</span>
             </div>
           </div>`;
-      }
+        itemsList.appendChild(div);
+      });
+      // TOTAL do bloco (sempre)
+      const totalDiv = document.createElement("div");
+      totalDiv.style.cssText = "padding:4px 12px 10px 12px;";
+      totalDiv.innerHTML = `<span style="font-size:13px;font-weight:bold;color:#3a7bd5">TOTAL ${b.sub}<span style="font-size:11px;font-weight:400;color:var(--text2)">un</span></span>`;
+      itemsList.appendChild(totalDiv);
+    });
+
+    // Observações livres (sem TOTAL)
+    obsRender.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "hist-item";
+      div.innerHTML = `<div class="hist-body" style="cursor:default">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <span style="font-size:var(--fs-nome);font-weight:700;color:var(--text);flex:1;word-break:break-word">📝 ${p.tipo || ""}</span>
+          </div>
+        </div>`;
       itemsList.appendChild(div);
     });
     list.appendChild(card);
