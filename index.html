@@ -788,7 +788,7 @@
 </script>
 
 <script>
-const VERSAO = "v2";
+const VERSAO = "v3";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -3990,6 +3990,8 @@ function cloudPush(){
     } catch (e) {
       console.error("Erro ao salvar na nuvem:", e);
       setSyncStatus("error");
+      // Guarda timestamp do erro para que, ao reconectar, o app reenvie os dados locais
+      cloudLastLocalEdit = cloudLastLocalEdit || Date.now();
     } finally {
       cloudPushPending = false;
     }
@@ -4004,8 +4006,18 @@ function cloudSubscribe(){
   setSyncStatus("syncing");
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
+    // Se temos edição local mais recente que o snapshot → ignorar snapshot e reenviar local
     if (Date.now() - cloudLastLocalEdit < 2000) { setSyncStatus("online"); return; }
     const data = snap.data();
+    // Compara timestamp do Firebase com o da última edição local
+    // Se o local for mais recente (edição offline não sincronizada), faz push em vez de aplicar
+    const remoteTs = data.updatedAt && data.updatedAt.toMillis ? data.updatedAt.toMillis() : 0;
+    if (cloudLastLocalEdit > 0 && cloudLastLocalEdit > remoteTs) {
+      // Dados locais são mais novos — reenvia pra nuvem em vez de sobrescrever
+      setSyncStatus("syncing");
+      cloudPush();
+      return;
+    }
     cloudApplyingRemote = true;
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
     if (Array.isArray(data.items))       items       = data.items;
