@@ -838,7 +838,7 @@ function aplicarZoom(idx){
 function ciclarZoom(){ aplicarZoom((zoomIdx + 1) % ZOOM_LEVELS.length); }
 aplicarZoom(zoomIdx);
 
-function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
+function salvarDados(){cloudLastLocalEdit = Date.now();localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
 function atualizarBtnPedidos() {
   const badge = document.getElementById("pedidosBadge");
   if (!badge) return;
@@ -3953,6 +3953,7 @@ let workspaceId = localStorage.getItem("workspaceId") || null;
 let cloudUnsub = null;
 let cloudReady = false;
 let cloudApplyingRemote = false;     // evita loop quando aplicamos dados vindos do snapshot
+let cloudLastLocalEdit = 0;           // timestamp da última edição local — evita que snapshot antigo sobrescreva edição recente
 let cloudPushTimer = null;
 let cloudPushPending = false;
 let qrScanner = null;
@@ -4001,7 +4002,7 @@ function cloudSubscribe(){
   setSyncStatus("syncing");
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
-    if (cloudPushPending || cloudPushTimer) { setSyncStatus("online"); return; }
+    if (Date.now() - cloudLastLocalEdit < 2000) { setSyncStatus("online"); return; }
     const data = snap.data();
     cloudApplyingRemote = true;
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
