@@ -373,7 +373,6 @@
     </div>
   </div>
 </header>
-<div id="syncBanner" style="display:none;padding:10px 16px;font-size:13px;color:#fff;text-align:center;position:sticky;top:57px;z-index:19;line-height:1.4"></div>
 
 <div id="temaPanel">
   <div class="tema-opt active" id="t-escuro" onclick="setTema('')"><div class="tema-dot" style="background:#c8a96e;border:2px solid #8b6e3f"></div>Escuro</div>
@@ -789,7 +788,7 @@
 </script>
 
 <script>
-const VERSAO = "v4";
+const VERSAO = "v6";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -3961,32 +3960,12 @@ let cloudPushTimer = null;
 let cloudPushPending = false;
 let qrScanner = null;
 
-let _syncWarnTimer = null;
 function setSyncStatus(state){
   const dot = document.getElementById("syncDot"); if (!dot) return;
   dot.className = state;
   const titles = {online:"Sincronizado",syncing:"Sincronizando...",offline:"Offline (salvo localmente)",error:"Erro na sincronização"};
   dot.title = titles[state] || "";
-  // Banner de aviso: se ficar em erro/syncing por mais de 3s, avisa o usuário
-  clearTimeout(_syncWarnTimer);
-  const banner = document.getElementById("syncBanner");
-  if (!banner) return;
-  if (state === "online") {
-    banner.style.display = "none";
-  } else if (state === "error" || state === "syncing") {
-    _syncWarnTimer = setTimeout(() => {
-      if (state === "error") {
-        banner.style.background = "#8b1a1a";
-        banner.innerHTML = "⚠️ <strong>Sem conexão com a nuvem.</strong> Não feche o app — aguarde a bolinha ficar verde antes de sair.";
-      } else {
-        banner.style.background = "#5a4a10";
-        banner.innerHTML = "🔄 Sincronizando com a nuvem… aguarde.";
-      }
-      banner.style.display = "block";
-    }, 3000);
-  } else {
-    banner.style.display = "none";
-  }
+
 }
 
 function gerarCodigoWorkspace(){
@@ -4070,6 +4049,10 @@ function cloudSubscribe(){
     atualizarBtnPedidos();
   }, (err) => {
     console.error("Erro snapshot:", err); setSyncStatus("error");
+    // Tenta reconectar após 5 segundos quando o listener quebra
+    setTimeout(() => {
+      if (workspaceId && cloudReady) cloudSubscribe();
+    }, 5000);
   });
 }
 
@@ -4319,6 +4302,22 @@ window.addEventListener("fb-ready", () => {
   } else {
     mostrarSetup();
   }
+});
+
+// Reconectar automaticamente quando a internet voltar
+window.addEventListener("online", () => {
+  if (workspaceId && cloudReady) {
+    setSyncStatus("syncing");
+    // Pequeno delay para garantir que a conexão estabilizou
+    setTimeout(() => {
+      cloudSubscribe();
+      // Se há dados locais mais novos, reenviar
+      if (localVersion > 0) cloudPush();
+    }, 1500);
+  }
+});
+window.addEventListener("offline", () => {
+  setSyncStatus("offline");
 });
 
 // Fallback: se o Firebase não estiver disponível, abre o app no modo local
