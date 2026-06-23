@@ -373,6 +373,7 @@
     </div>
   </div>
 </header>
+<div id="syncBanner" style="display:none;padding:10px 16px;font-size:13px;color:#fff;text-align:center;position:sticky;top:57px;z-index:19;line-height:1.4"></div>
 
 <div id="temaPanel">
   <div class="tema-opt active" id="t-escuro" onclick="setTema('')"><div class="tema-dot" style="background:#c8a96e;border:2px solid #8b6e3f"></div>Escuro</div>
@@ -788,7 +789,7 @@
 </script>
 
 <script>
-const VERSAO = "v3";
+const VERSAO = "v4";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -839,7 +840,7 @@ function aplicarZoom(idx){
 function ciclarZoom(){ aplicarZoom((zoomIdx + 1) % ZOOM_LEVELS.length); }
 aplicarZoom(zoomIdx);
 
-function salvarDados(){cloudLastLocalEdit = Date.now();localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
+function salvarDados(){localVersion++;localStorage.setItem("localVersion",String(localVersion));localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
 function atualizarBtnPedidos() {
   const badge = document.getElementById("pedidosBadge");
   if (!badge) return;
@@ -3955,16 +3956,37 @@ let workspaceId = localStorage.getItem("workspaceId") || null;
 let cloudUnsub = null;
 let cloudReady = false;
 let cloudApplyingRemote = false;     // evita loop quando aplicamos dados vindos do snapshot
-let cloudLastLocalEdit = 0;           // timestamp da última edição local — evita que snapshot antigo sobrescreva edição recente
+let localVersion = parseInt(localStorage.getItem("localVersion") || "0"); // contador incremental de edições locais
 let cloudPushTimer = null;
 let cloudPushPending = false;
 let qrScanner = null;
 
+let _syncWarnTimer = null;
 function setSyncStatus(state){
   const dot = document.getElementById("syncDot"); if (!dot) return;
   dot.className = state;
   const titles = {online:"Sincronizado",syncing:"Sincronizando...",offline:"Offline (salvo localmente)",error:"Erro na sincronização"};
   dot.title = titles[state] || "";
+  // Banner de aviso: se ficar em erro/syncing por mais de 3s, avisa o usuário
+  clearTimeout(_syncWarnTimer);
+  const banner = document.getElementById("syncBanner");
+  if (!banner) return;
+  if (state === "online") {
+    banner.style.display = "none";
+  } else if (state === "error" || state === "syncing") {
+    _syncWarnTimer = setTimeout(() => {
+      if (state === "error") {
+        banner.style.background = "#8b1a1a";
+        banner.innerHTML = "⚠️ <strong>Sem conexão com a nuvem.</strong> Não feche o app — aguarde a bolinha ficar verde antes de sair.";
+      } else {
+        banner.style.background = "#5a4a10";
+        banner.innerHTML = "🔄 Sincronizando com a nuvem… aguarde.";
+      }
+      banner.style.display = "block";
+    }, 3000);
+  } else {
+    banner.style.display = "none";
+  }
 }
 
 function gerarCodigoWorkspace(){
@@ -3984,14 +4006,13 @@ function cloudPush(){
       const { db, doc, setDoc, serverTimestamp } = window.fb;
       await setDoc(doc(db, "estoques", workspaceId), {
         marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos, reservas,
-        updatedAt: serverTimestamp()
+        localVersion, updatedAt: serverTimestamp()
       }, { merge: true });
       setSyncStatus("online");
     } catch (e) {
       console.error("Erro ao salvar na nuvem:", e);
       setSyncStatus("error");
-      // Guarda timestamp do erro para que, ao reconectar, o app reenvie os dados locais
-      cloudLastLocalEdit = cloudLastLocalEdit || Date.now();
+      // localVersion já está incrementado — ao reconectar, cloudSubscribe vai detectar e reenviar
     } finally {
       cloudPushPending = false;
     }
@@ -4007,12 +4028,12 @@ function cloudSubscribe(){
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
     // Se temos edição local mais recente que o snapshot → ignorar snapshot e reenviar local
-    if (Date.now() - cloudLastLocalEdit < 2000) { setSyncStatus("online"); return; }
+    // proteção de 2s removida — agora usamos localVersion
     const data = snap.data();
-    // Compara timestamp do Firebase com o da última edição local
-    // Se o local for mais recente (edição offline não sincronizada), faz push em vez de aplicar
-    const remoteTs = data.updatedAt && data.updatedAt.toMillis ? data.updatedAt.toMillis() : 0;
-    if (cloudLastLocalEdit > 0 && cloudLastLocalEdit > remoteTs) {
+    // Só aplica snapshot se versão da nuvem >= versão local
+    // Isso garante que edições offline não sejam sobrescritas pelo Firebase
+    const remoteVersion = typeof data.localVersion === "number" ? data.localVersion : 0;
+    if (localVersion > remoteVersion) {
       // Dados locais são mais novos — reenvia pra nuvem em vez de sobrescrever
       setSyncStatus("syncing");
       cloudPush();
@@ -4036,6 +4057,11 @@ function cloudSubscribe(){
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
     localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
     localStorage.setItem("reservas", JSON.stringify(reservas));
+    // Sincroniza localVersion com a versão que veio da nuvem
+    if (typeof data.localVersion === "number") {
+      localVersion = data.localVersion;
+      localStorage.setItem("localVersion", String(localVersion));
+    }
     cloudApplyingRemote = false;
     setSyncStatus("online");
     // re-render do que estiver visível
