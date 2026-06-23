@@ -664,7 +664,7 @@
       </div>
     </div>
     <div class="section-header">
-      <span class="section-title">Marceneiros</span>
+      <span class="section-title">Marceneiros <span id="versaoLabel" style="font-size:11px;color:var(--text2);letter-spacing:1px;font-weight:normal;font-style:italic"></span></span>
       <button class="btn-add-home" onclick="toggleAddForm()">+ Adicionar</button>
     </div>
     <div class="add-card" id="addCard">
@@ -788,6 +788,7 @@
 </script>
 
 <script>
+const VERSAO = "v2";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -906,6 +907,7 @@ function fabIrForm(tipo){closeFab();irForm(tipo)}
 // HOME
 function renderHome(){
   const grid=document.getElementById("gridMarceneiros");grid.innerHTML="";
+  const vl=document.getElementById("versaoLabel");if(vl)vl.textContent=VERSAO;
   // Totais gerais — soma das quantidades
   const tp=items.filter(i=>i.categoria==="porta").reduce((s,i)=>s+Number(i.qtd),0);
   const tj=items.filter(i=>i.categoria==="janela").reduce((s,i)=>s+Number(i.qtd),0);
