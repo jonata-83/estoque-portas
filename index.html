@@ -788,7 +788,7 @@
 </script>
 
 <script>
-const VERSAO = "v6";
+const VERSAO = "v7";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -3977,7 +3977,6 @@ function gerarCodigoWorkspace(){
 // Empurra dados locais pra nuvem (com debounce)
 function cloudPush(){
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
-  setSyncStatus("syncing");
   clearTimeout(cloudPushTimer);
   cloudPushPending = true;
   cloudPushTimer = setTimeout(async () => {
@@ -4003,7 +4002,6 @@ function cloudSubscribe(){
   if (!workspaceId || !window.fb) return;
   const { db, doc, onSnapshot } = window.fb;
   if (cloudUnsub) cloudUnsub();
-  setSyncStatus("syncing");
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
     // Se temos edição local mais recente que o snapshot → ignorar snapshot e reenviar local
@@ -4048,8 +4046,8 @@ function cloudSubscribe(){
     atualizarBtnSaidas();
     atualizarBtnPedidos();
   }, (err) => {
-    console.error("Erro snapshot:", err); setSyncStatus("error");
-    // Tenta reconectar após 5 segundos quando o listener quebra
+    console.error("Erro snapshot:", err);
+    // Não mostra vermelho — reconecta silenciosamente
     setTimeout(() => {
       if (workspaceId && cloudReady) cloudSubscribe();
     }, 5000);
