@@ -763,7 +763,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp
+    getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp,
+    enableIndexedDbPersistence
   } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -778,9 +779,8 @@
   const fbApp = initializeApp(firebaseConfig);
   const db = getFirestore(fbApp);
 
-  // Persistência offline via localStorage (gerenciado pelo app)
-  // enableIndexedDbPersistence desabilitado — causava snapshots com dados stale
-  // que sobrescreviam alterações locais antes do Firebase confirmar
+  // Persistência offline (cache local automático)
+  try { enableIndexedDbPersistence(db); } catch(e) { /* ignore */ }
 
   // Expor para o código principal
   window.fb = { db, doc, setDoc, getDoc, onSnapshot, serverTimestamp };
@@ -4026,8 +4026,7 @@ const _deviceId = (() => {
   if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("deviceId", id); }
   return id;
 })();
-let _lastPushId = null;    // ID do último push enviado
-let _pushConfirmed = true; // false enquanto aguarda confirmação do Firebase
+let _lastPushId = null; // ID do último push que fizemos — para ignorar nosso próprio snapshot
 
 // Força uma leitura imediata da nuvem
 async function cloudPull() {
@@ -4069,27 +4068,100 @@ async function cloudPull() {
   }
 }
 
+// Merge arrays por ID — une os dois arrays mantendo todos os IDs únicos
+// Prioriza os dados locais (mais recentes do nosso dispositivo)
+function _mergeById(local, remote) {
+  if (!Array.isArray(remote) || !remote.length) return local;
+  if (!Array.isArray(local)  || !local.length)  return remote;
+  const localIds  = new Set(local.map(x => x.id));
+  const remoteIds = new Set(remote.map(x => x.id));
+  // itens que só existem no remote (adicionados por outro usuário)
+  const onlyRemote = remote.filter(x => !localIds.has(x.id));
+  // itens locais (nossos dados, incluindo edições e exclusões)
+  return [...local, ...onlyRemote];
+}
+
+// Merge de lembretes (objeto keyed por marceneiroId)
+function _mergeLembretes(local, remote) {
+  if (!remote || typeof remote !== 'object') return local;
+  const merged = { ...remote };
+  // Para cada chave local, nossos dados têm prioridade
+  Object.keys(local).forEach(k => { merged[k] = local[k]; });
+  return merged;
+}
+
 function cloudPush(){
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
   clearTimeout(cloudPushTimer);
   cloudPushPending = true;
-  _pushConfirmed = false; // aguardando confirmação
   _lastPushId = _deviceId + "_" + Date.now();
   const pushId = _lastPushId;
+  // Captura snapshot dos dados locais AGORA (antes do delay)
+  const localSnap = {
+    marceneiros: JSON.parse(JSON.stringify(marceneiros)),
+    items:       JSON.parse(JSON.stringify(items)),
+    lembretes:   JSON.parse(JSON.stringify(lembretes)),
+    saidas:      JSON.parse(JSON.stringify(saidas)),
+    pedidos:     JSON.parse(JSON.stringify(pedidos)),
+    saidasHistorico: JSON.parse(JSON.stringify(saidasHistorico)),
+    saidaPrecos: JSON.parse(JSON.stringify(saidaPrecos)),
+    reservas:    JSON.parse(JSON.stringify(reservas)),
+  };
   cloudPushTimer = setTimeout(async () => {
     try {
-      const { db, doc, setDoc, serverTimestamp } = window.fb;
-      await setDoc(doc(db, "estoques", workspaceId), {
-        marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos, reservas,
+      const { db, doc, setDoc, getDoc, serverTimestamp } = window.fb;
+      const ref = doc(db, "estoques", workspaceId);
+      // Buscar dado atual do Firebase para fazer merge
+      let mergedData = { ...localSnap };
+      try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const remote = snap.data();
+          // Só faz merge se o último escritor foi OUTRO dispositivo
+          if (remote.lastWriteDeviceId && remote.lastWriteDeviceId !== _deviceId) {
+            mergedData = {
+              marceneiros: _mergeById(localSnap.marceneiros, remote.marceneiros),
+              items:       _mergeById(localSnap.items,       remote.items),
+              lembretes:   _mergeLembretes(localSnap.lembretes, remote.lembretes),
+              saidas:      _mergeById(localSnap.saidas,      remote.saidas),
+              pedidos:     _mergeById(localSnap.pedidos,     remote.pedidos),
+              saidasHistorico: _mergeById(localSnap.saidasHistorico, remote.saidasHistorico),
+              saidaPrecos: { ...remote.saidaPrecos, ...localSnap.saidaPrecos },
+              reservas:    _mergeById(localSnap.reservas,    remote.reservas),
+            };
+            // Atualiza memória local com o merge
+            cloudApplyingRemote = true;
+            marceneiros     = mergedData.marceneiros;
+            items           = mergedData.items;
+            lembretes       = mergedData.lembretes;
+            saidas          = mergedData.saidas;
+            pedidos         = mergedData.pedidos;
+            saidasHistorico = mergedData.saidasHistorico;
+            saidaPrecos     = mergedData.saidaPrecos;
+            reservas        = mergedData.reservas;
+            localStorage.setItem("marceneiros",     JSON.stringify(marceneiros));
+            localStorage.setItem("items",           JSON.stringify(items));
+            localStorage.setItem("lembretes",       JSON.stringify(lembretes));
+            localStorage.setItem("saidas",          JSON.stringify(saidas));
+            localStorage.setItem("pedidos",         JSON.stringify(pedidos));
+            localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
+            localStorage.setItem("saidaPrecos",     JSON.stringify(saidaPrecos));
+            localStorage.setItem("reservas",        JSON.stringify(reservas));
+            cloudApplyingRemote = false;
+            try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); else if (viewAtual === "pedidos") renderPedidos(); } catch(e){}
+            atualizarBtnSaidas(); atualizarBtnPedidos();
+          }
+        }
+      } catch(e) { /* sem internet — envia dados locais mesmo */ }
+      await setDoc(ref, {
+        ...mergedData,
         updatedAt: serverTimestamp(),
         lastWriteDeviceId: _deviceId,
         lastWritePushId: pushId
-      }, { merge: true });
-      _pushConfirmed = true; // Firebase confirmou
+      }, { merge: false }); // merge:false para sobrescrever limpo
       setSyncStatus("online");
     } catch (e) {
       console.error("Erro ao salvar na nuvem:", e);
-      _pushConfirmed = true; // libera mesmo em erro
       setSyncStatus("error");
     } finally {
       cloudPushPending = false;
@@ -4105,20 +4177,13 @@ function cloudSubscribe(){
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
     const data = snap.data();
-    // Ignorar snapshots do nosso próprio dispositivo
+    // Ignorar snapshots que vieram do NOSSO próprio dispositivo
+    // (o Firebase devolve nosso próprio push como snapshot — não queremos sobrescrever nossos dados)
     const snapDeviceId = data.lastWriteDeviceId || null;
     const snapPushId   = data.lastWritePushId   || null;
-    if (snapDeviceId === _deviceId) {
-      // É nosso próprio push voltando como snapshot
-      if (!_pushConfirmed) {
-        // Push ainda não confirmado — dados em memória já estão corretos, ignorar
-        return;
-      }
-      if (snapPushId === _lastPushId) {
-        // É exatamente o push que acabamos de confirmar — ignorar
-        setSyncStatus("online");
-        return;
-      }
+    if (snapDeviceId === _deviceId && snapPushId === _lastPushId) {
+      setSyncStatus("online");
+      return; // é o nosso próprio push chegando de volta, ignorar
     }
     cloudApplyingRemote = true;
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
