@@ -839,7 +839,7 @@ function aplicarZoom(idx){
 function ciclarZoom(){ aplicarZoom((zoomIdx + 1) % ZOOM_LEVELS.length); }
 aplicarZoom(zoomIdx);
 
-function salvarDados(){localVersion++;localStorage.setItem("localVersion",String(localVersion));localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
+function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
 function atualizarBtnPedidos() {
   const badge = document.getElementById("pedidosBadge");
   if (!badge) return;
@@ -3826,31 +3826,56 @@ function renderPedidos() {
   list.innerHTML = "";
   grupos.forEach(g => {
     const card = document.createElement("div");
-    card.style.cssText = "border:1px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--card-bg)";
+    card.style.cssText = "border:1px solid var(--border2);border-radius:14px;margin-bottom:14px;background:var(--card-bg);overflow:hidden";
     const dataFmt = formatDataEntrega(g.dataEntrega);
     const diaSem = diaSemanaEntrega(g.dataEntrega);
-    card.innerHTML = `<div class="pedido-card-header" style="margin-bottom:10px;user-select:none;-webkit-user-select:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <span style="font-size:17px;font-weight:bold;color:var(--text)">${g.cliente}</span>
-          <div style="display:flex;gap:6px;flex-shrink:0">
-            <button class="btn-png-pedido" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">🖼️</button>
-            <button class="btn-zap-pedido" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">💬</button>
-            <button class="btn-cfg-pedido" title="Opções" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">⚙️</button>
-          </div>
+    const totalItens = g.itens.filter(p => !p.obs).reduce((a,p) => a + Number(p.qtd), 0);
+
+    // Cabeçalho sempre visível (clicável para expandir/recolher)
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px;cursor:pointer;user-select:none;-webkit-user-select:none";
+    header.innerHTML = `
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:17px;font-weight:bold;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.cliente}</span>
+          <span style="font-size:12px;color:var(--text2);font-weight:bold;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px 7px;flex-shrink:0">${totalItens} un</span>
         </div>
-        ${dataFmt ? `<div style="font-size:15px;font-weight:bold;color:var(--accent);letter-spacing:1px;margin-top:4px">ENTREGA: ${diaSem}, ${dataFmt}</div>` : ""}
+        ${dataFmt ? `<div style="font-size:13px;font-weight:bold;color:var(--accent);margin-top:3px">📅 ${diaSem}, ${dataFmt}</div>` : ""}
       </div>
-      <div class="hist-list"></div>`;
-    const zapBtn = card.querySelector(".btn-zap-pedido");
-    const pngBtn = card.querySelector(".btn-png-pedido");
-    const cfgBtn = card.querySelector(".btn-cfg-pedido");
+      <span class="pedido-chevron" style="font-size:13px;color:var(--text2);transition:transform .2s;flex-shrink:0">▶</span>`;
+
+    // Corpo expansível (oculto por padrão)
+    const body = document.createElement("div");
+    body.style.cssText = "display:none;border-top:1px solid var(--border);padding:10px 14px 14px";
+
+    // Botões de ação dentro do corpo
+    const acoes = document.createElement("div");
+    acoes.style.cssText = "display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px";
+    acoes.innerHTML = `
+      <button class="btn-png-pedido" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">🖼️</button>
+      <button class="btn-zap-pedido" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366;border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">💬</button>
+      <button class="btn-cfg-pedido" title="Opções" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;font-size:18px;cursor:pointer">⚙️</button>`;
+    body.appendChild(acoes);
+
+    // Toggle ao clicar no header
+    const chevron = header.querySelector(".pedido-chevron");
+    header.addEventListener("click", () => {
+      const aberto = body.style.display !== "none";
+      body.style.display = aberto ? "none" : "block";
+      chevron.style.transform = aberto ? "" : "rotate(90deg)";
+    });
+
+    const zapBtn = acoes.querySelector(".btn-zap-pedido");
+    const pngBtn = acoes.querySelector(".btn-png-pedido");
+    const cfgBtn = acoes.querySelector(".btn-cfg-pedido");
     const labelMenu = g.cliente + (dataFmt ? "  ·  Entrega: " + dataFmt : "");
     zapBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoTexto(g.cliente, g.dataEntrega); });
     pngBtn.addEventListener("click", e => { e.stopPropagation(); compartilharPedidoPNG(g.cliente, g.dataEntrega, pngBtn); });
     cfgBtn.addEventListener("click", e => { e.stopPropagation(); abrirPedidoMenu(g.cliente, g.dataEntrega, labelMenu); });
-    const itemsList = card.querySelector(".hist-list");
 
-    // Agrupar itens normais por nome para mostrar TOTAL por tipo
+    const itemsList = document.createElement("div");
+    itemsList.className = "hist-list";
+
     const { blocos: blocosRender, obsItens: obsRender } = _prepararBlocosPedido(g.cliente, g.dataEntrega, g.itens);
 
     blocosRender.forEach(b => {
@@ -3865,14 +3890,12 @@ function renderPedidos() {
           </div>`;
         itemsList.appendChild(div);
       });
-      // TOTAL do bloco (sempre)
       const totalDiv = document.createElement("div");
       totalDiv.style.cssText = "padding:4px 12px 10px 12px;";
       totalDiv.innerHTML = `<span style="font-size:13px;font-weight:bold;color:#3a7bd5">TOTAL ${b.sub}<span style="font-size:11px;font-weight:400;color:var(--text2)">un</span></span>`;
       itemsList.appendChild(totalDiv);
     });
 
-    // Observações livres (sem TOTAL)
     obsRender.forEach(p => {
       const div = document.createElement("div");
       div.className = "hist-item";
@@ -3883,9 +3906,14 @@ function renderPedidos() {
         </div>`;
       itemsList.appendChild(div);
     });
+
+    body.appendChild(itemsList);
+    card.appendChild(header);
+    card.appendChild(body);
     list.appendChild(card);
   });
 }
+
 function adicionarPedido() {
   const cliente = document.getElementById("pedCliente").value.trim();
   const tipo = document.getElementById("pedTipo").value.trim();
@@ -3975,22 +4003,26 @@ function gerarCodigoWorkspace(){
 }
 
 // Empurra dados locais pra nuvem (com debounce)
+let _lastLocalWrite = 0; // timestamp da última escrita local
+
 function cloudPush(){
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
   clearTimeout(cloudPushTimer);
   cloudPushPending = true;
+  _lastLocalWrite = Date.now();
   cloudPushTimer = setTimeout(async () => {
     try {
       const { db, doc, setDoc, serverTimestamp } = window.fb;
+      const writeTs = Date.now();
       await setDoc(doc(db, "estoques", workspaceId), {
         marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos, reservas,
-        localVersion, updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        clientTs: writeTs
       }, { merge: true });
       setSyncStatus("online");
     } catch (e) {
       console.error("Erro ao salvar na nuvem:", e);
       setSyncStatus("error");
-      // localVersion já está incrementado — ao reconectar, cloudSubscribe vai detectar e reenviar
     } finally {
       cloudPushPending = false;
     }
@@ -4004,17 +4036,13 @@ function cloudSubscribe(){
   if (cloudUnsub) cloudUnsub();
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
-    // Se temos edição local mais recente que o snapshot → ignorar snapshot e reenviar local
-    // proteção de 2s removida — agora usamos localVersion
     const data = snap.data();
-    // Só aplica snapshot se versão da nuvem >= versão local
-    // Isso garante que edições offline não sejam sobrescritas pelo Firebase
-    const remoteVersion = typeof data.localVersion === "number" ? data.localVersion : 0;
-    if (localVersion > remoteVersion) {
-      // Dados locais são mais novos — reenvia pra nuvem em vez de sobrescrever
-      setSyncStatus("syncing");
-      cloudPush();
-      return;
+    // Proteção: se escrevemos localmente nos últimos 1.5s, ignorar snapshot antigo
+    // (o Firebase pode disparar o nosso próprio push de volta como snapshot)
+    const remoteClientTs = data.clientTs || 0;
+    const msSinceLocalWrite = Date.now() - _lastLocalWrite;
+    if (_lastLocalWrite > 0 && msSinceLocalWrite < 1500 && remoteClientTs < _lastLocalWrite) {
+      return; // nosso próprio push chegou como snapshot, ignorar
     }
     cloudApplyingRemote = true;
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
@@ -4034,11 +4062,6 @@ function cloudSubscribe(){
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
     localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
     localStorage.setItem("reservas", JSON.stringify(reservas));
-    // Sincroniza localVersion com a versão que veio da nuvem
-    if (typeof data.localVersion === "number") {
-      localVersion = data.localVersion;
-      localStorage.setItem("localVersion", String(localVersion));
-    }
     cloudApplyingRemote = false;
     setSyncStatus("online");
     // re-render do que estiver visível
@@ -4309,8 +4332,6 @@ window.addEventListener("online", () => {
     // Pequeno delay para garantir que a conexão estabilizou
     setTimeout(() => {
       cloudSubscribe();
-      // Se há dados locais mais novos, reenviar
-      if (localVersion > 0) cloudPush();
     }, 1500);
   }
 });
