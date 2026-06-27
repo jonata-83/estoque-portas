@@ -788,7 +788,7 @@
 </script>
 
 <script>
-const VERSAO = "v9";
+const VERSAO = "v10";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -3800,6 +3800,12 @@ function diaSemanaEntrega(iso) {
 }
 function renderPedidos() {
   const list = document.getElementById("pedidosList");
+  // Guardar quais cards estão abertos antes de reconstruir
+  const _abertos = new Set();
+  list.querySelectorAll("[data-pedido-key]").forEach(el => {
+    const body = el.querySelector(".pedido-body");
+    if (body && body.style.display !== "none") _abertos.add(el.dataset.pedidoKey);
+  });
   if (!pedidos.length) {
     list.innerHTML = `<p style="color:var(--text2);font-size:14px;margin-top:20px;text-align:center">Nenhum pedido ainda.</p>`;
     return;
@@ -3826,6 +3832,8 @@ function renderPedidos() {
   list.innerHTML = "";
   grupos.forEach(g => {
     const card = document.createElement("div");
+    const _cardKey = g.cliente + "||" + g.dataEntrega;
+    card.dataset.pedidoKey = _cardKey;
     card.style.cssText = "border:1px solid var(--border2);border-radius:14px;margin-bottom:14px;background:var(--card-bg);overflow:hidden";
     const dataFmt = formatDataEntrega(g.dataEntrega);
     const diaSem = diaSemanaEntrega(g.dataEntrega);
@@ -3844,9 +3852,11 @@ function renderPedidos() {
       </div>
       <span class="pedido-chevron" style="font-size:13px;color:var(--text2);transition:transform .2s;flex-shrink:0">▶</span>`;
 
-    // Corpo expansível (oculto por padrão)
+    // Corpo expansível (oculto por padrão, restaura se estava aberto)
     const body = document.createElement("div");
-    body.style.cssText = "display:none;border-top:1px solid var(--border);padding:10px 14px 14px";
+    body.className = "pedido-body";
+    const _estaAberto = _abertos.has(_cardKey);
+    body.style.cssText = (_estaAberto ? "display:block" : "display:none") + ";border-top:1px solid var(--border);padding:10px 14px 14px";
 
     // Botões de ação dentro do corpo
     const acoes = document.createElement("div");
@@ -3859,6 +3869,7 @@ function renderPedidos() {
 
     // Toggle ao clicar no header
     const chevron = header.querySelector(".pedido-chevron");
+    if (_estaAberto) chevron.style.transform = "rotate(90deg)";
     header.addEventListener("click", () => {
       const aberto = body.style.display !== "none";
       body.style.display = aberto ? "none" : "block";
@@ -4050,14 +4061,14 @@ function cloudPush(){
   clearTimeout(cloudPushTimer);
   cloudPushPending = true;
   _lastLocalWrite = Date.now();
+  const _thisWriteTs = _lastLocalWrite; // captura antes do delay
   cloudPushTimer = setTimeout(async () => {
     try {
       const { db, doc, setDoc, serverTimestamp } = window.fb;
-      const writeTs = Date.now();
       await setDoc(doc(db, "estoques", workspaceId), {
         marceneiros, items, lembretes, saidas, pedidos, saidasHistorico, saidaPrecos, reservas,
         updatedAt: serverTimestamp(),
-        clientTs: writeTs
+        clientTs: _thisWriteTs
       }, { merge: true });
       setSyncStatus("online");
     } catch (e) {
@@ -4081,7 +4092,8 @@ function cloudSubscribe(){
     // (o Firebase pode disparar o nosso próprio push de volta como snapshot)
     const remoteClientTs = data.clientTs || 0;
     const msSinceLocalWrite = Date.now() - _lastLocalWrite;
-    if (_lastLocalWrite > 0 && msSinceLocalWrite < 1500 && remoteClientTs < _lastLocalWrite) {
+    // Ignorar snapshots que sejam do nosso próprio push (evita revert de dados locais)
+    if (_lastLocalWrite > 0 && msSinceLocalWrite < 3000 && remoteClientTs <= _lastLocalWrite) {
       return; // nosso próprio push chegou como snapshot, ignorar
     }
     cloudApplyingRemote = true;
