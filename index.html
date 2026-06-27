@@ -787,7 +787,7 @@
 </script>
 
 <script>
-const VERSAO = "v15";
+const VERSAO = "v16";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -3639,14 +3639,15 @@ function enviarLembreteTexto(idx) {
   _enviarTexto(l.txt);
 }
 function deletarLembrete(idx) {
-   // bloqueia snapshots imediatamente, antes da senha
-  pedirSenha(() => {
-    lembretes[lembreteIdAtual].splice(idx, 1);
-    // Mantém a chave como array vazio (NÃO usar "delete") — assim o merge
-    // do Firestore substitui o array corretamente, em vez de preservar
-    // o valor antigo (que fazia o último lembrete "voltar" depois de excluído).
-    salvarDados(); renderLembreteList(); renderHome();
-  }, "Digite a senha para excluir este lembrete");
+  _pedirConfirmacao(
+    "Excluir este lembrete?",
+    () => {
+      lembretes[lembreteIdAtual].splice(idx, 1);
+      salvarDados(); renderLembreteList(); renderHome();
+    },
+    "🗑 Excluir",
+    "linear-gradient(135deg,#e05050,#a02020)"
+  );
 }
 function fecharLembrete() {
   lembreteIdAtual = null;
@@ -3764,12 +3765,19 @@ function fecharPedidoMenu() {
 }
 function excluirPedidoCard() {
   if (!pedidoMenuAtual) return;
-   // bloqueia snapshots imediatamente
   const { cliente, dataEntrega } = pedidoMenuAtual;
-  pedidos = pedidos.filter(p => !(p.cliente === cliente && (p.dataEntrega || "") === dataEntrega));
-  salvarDados();
+  const dataFmt = formatDataEntrega(dataEntrega);
   fecharPedidoMenu();
-  renderPedidos();
+  _pedirConfirmacao(
+    `Excluir pedido de "${cliente}"${dataFmt ? " · " + dataFmt : ""}?`,
+    () => {
+      pedidos = pedidos.filter(p => !(p.cliente === cliente && (p.dataEntrega || "") === dataEntrega));
+      salvarDados();
+      renderPedidos();
+    },
+    "🗑 Excluir",
+    "linear-gradient(135deg,#e05050,#a02020)"
+  );
 }
 function editarPedidoCard() {
   if (!pedidoMenuAtual) return;
