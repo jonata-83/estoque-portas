@@ -787,7 +787,7 @@
 </script>
 
 <script>
-const VERSAO = "v16";
+const VERSAO = "v17";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -4080,29 +4080,26 @@ async function cloudPull() {
 // O Firestore faz merge nativo: campos de outros usuários não são afetados
 let _pushTimers = {}; // um timer por campo para debounce individual
 
+// Mapa de leitura de dados por campo — lê da memória no momento do push
+const _campoParaDado = () => ({
+  marceneiros, items, lembretes, pedidos,
+  saidas, saidasHistorico, saidaPrecos, reservas
+});
+
 function cloudPush(campos) {
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
-  // Se campos não especificado, usa todos (compatibilidade)
   if (!campos) campos = ["marceneiros","items","lembretes","pedidos","saidas","saidasHistorico","saidaPrecos","reservas"];
   if (!Array.isArray(campos)) campos = [campos];
 
-  const mapaValores = {
-    marceneiros,
-    items,
-    lembretes,
-    pedidos,
-    saidas,
-    saidasHistorico,
-    saidaPrecos,
-    reservas
-  };
+  _lastPushId = _deviceId + "_" + Date.now();
 
   campos.forEach(campo => {
-    // Captura o valor AGORA antes do delay
-    const valor = JSON.parse(JSON.stringify(mapaValores[campo]));
     clearTimeout(_pushTimers[campo]);
     _pushTimers[campo] = setTimeout(async () => {
       if (!workspaceId || !cloudReady) return;
+      // Lê o valor DA MEMÓRIA ATUAL no momento do disparo
+      // (inclui qualquer dado de outros usuários que chegou enquanto o timer esperava)
+      const valor = JSON.parse(JSON.stringify(_campoParaDado()[campo]));
       try {
         const { db, doc, updateDoc, serverTimestamp } = window.fb;
         await updateDoc(doc(db, "estoques", workspaceId), {
@@ -4113,7 +4110,6 @@ function cloudPush(campos) {
         });
         setSyncStatus("online");
       } catch(e) {
-        // Se o documento não existe ainda, cria com setDoc
         if (e.code === "not-found") {
           try {
             const { db, doc, setDoc, serverTimestamp } = window.fb;
@@ -4130,9 +4126,8 @@ function cloudPush(campos) {
           setSyncStatus("error");
         }
       }
-    }, 400);
+    }, 600);
   });
-  _lastPushId = _deviceId + "_" + Date.now();
 }
 
 // Assina mudanças vindas da nuvem
@@ -4152,7 +4147,11 @@ function cloudSubscribe(){
       return; // é o nosso próprio push chegando de volta, ignorar
     }
     cloudApplyingRemote = true;
-    // updateDoc garante que cada campo só foi escrito pelo dono — aplica tudo direto
+    // Cancelar timers pendentes dos campos que vêm do remoto
+    // (evita que push antigo sobrescreva dados novos do outro usuário)
+    ["marceneiros","items","lembretes","pedidos","saidas","saidasHistorico","saidaPrecos","reservas"].forEach(c => {
+      if (_pushTimers[c]) { clearTimeout(_pushTimers[c]); delete _pushTimers[c]; }
+    });
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
     if (Array.isArray(data.items))       items       = data.items;
     if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
