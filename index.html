@@ -788,7 +788,7 @@
 </script>
 
 <script>
-const VERSAO = "v7";
+const VERSAO = "v9";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -1032,7 +1032,7 @@ function renderHistorico(){
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <div class="hist-title" style="margin:0">Lançamentos${filtroInfo}</div>
       <button onclick="alternarModoOrdem()" style="background:transparent;border:1px solid var(--border2);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Georgia,serif;line-height:1;letter-spacing:.5px">${modoManual ? '✋ Manual' : '↕ Auto'}</button>
-      <button onclick="cloudPull().then(()=>renderHistorico())" title="Atualizar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
+      <button onclick="cloudPull()" title="Atualizar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
     </div>
     <div style="display:flex;align-items:center;gap:6px;padding-right:28px"><span style="font-size:11px;color:var(--text2);letter-spacing:1px">TOTAL</span><span style="font-size:22px;font-weight:900;color:var(--accent)">${totalQtd}</span><span style="font-size:12px;color:var(--text2)">un</span></div>
   </div>
@@ -4005,6 +4005,46 @@ function gerarCodigoWorkspace(){
 // Empurra dados locais pra nuvem (com debounce)
 let _lastLocalWrite = 0; // timestamp da última escrita local
 
+// Força uma leitura imediata da nuvem
+async function cloudPull() {
+  if (!workspaceId || !window.fb) return;
+  setSyncStatus("syncing");
+  try {
+    const { db, doc, getDoc } = window.fb;
+    const snap = await getDoc(doc(db, "estoques", workspaceId));
+    if (!snap.exists()) { setSyncStatus("online"); return; }
+    const data = snap.data();
+    cloudApplyingRemote = true;
+    if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
+    if (Array.isArray(data.items))       items       = data.items;
+    if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
+    if (Array.isArray(data.saidas))      saidas      = data.saidas;
+    if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
+    if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
+    if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
+    if (Array.isArray(data.reservas)) reservas = data.reservas;
+    localStorage.setItem("marceneiros", JSON.stringify(marceneiros));
+    localStorage.setItem("items",       JSON.stringify(items));
+    localStorage.setItem("lembretes",   JSON.stringify(lembretes));
+    localStorage.setItem("saidas",      JSON.stringify(saidas));
+    localStorage.setItem("pedidos",     JSON.stringify(pedidos));
+    localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
+    localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
+    localStorage.setItem("reservas",    JSON.stringify(reservas));
+    cloudApplyingRemote = false;
+    setSyncStatus("online");
+    if (viewAtual === "home") renderHome();
+    else if (viewAtual === "tipo") renderHistorico();
+    else if (viewAtual === "pedidos") renderPedidos();
+    renderHome();
+    atualizarBtnSaidas();
+    atualizarBtnPedidos();
+  } catch(e) {
+    console.error("cloudPull error:", e);
+    setSyncStatus("error");
+  }
+}
+
 function cloudPush(){
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
   clearTimeout(cloudPushTimer);
@@ -4065,7 +4105,7 @@ function cloudSubscribe(){
     cloudApplyingRemote = false;
     setSyncStatus("online");
     // re-render do que estiver visível
-    try { if (viewAtual === "home") renderHome(); else if (viewAtual === "historico") renderHistorico(); else if (viewAtual === "pedidos") renderPedidos(); } catch(e){}
+    try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); else if (viewAtual === "pedidos") renderPedidos(); } catch(e){}
     atualizarBtnSaidas();
     atualizarBtnPedidos();
   }, (err) => {
@@ -4315,6 +4355,8 @@ function _fecharMenuReservaTudo() {
 
 window.addEventListener("fb-ready", () => {
   const workspaceId = localStorage.getItem("workspaceId");
+  // Limpar localVersion residual que pode bloquear sincronização
+  localStorage.removeItem("localVersion");
   if (workspaceId){
     cloudReady = true;
     // carrega cache local primeiro (render instantâneo), depois assina nuvem
