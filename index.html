@@ -764,7 +764,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp
+    getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp,
+    arrayUnion, arrayRemove
   } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -783,12 +784,12 @@
   // enableIndexedDbPersistence desabilitado pois causa snapshots com dados stale
 
   // Expor para o código principal
-  window.fb = { db, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp };
+  window.fb = { db, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp, arrayUnion, arrayRemove };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
 <script>
-const VERSAO = "v17";
+const VERSAO = "v18";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -839,7 +840,7 @@ function aplicarZoom(idx){
 function ciclarZoom(){ aplicarZoom((zoomIdx + 1) % ZOOM_LEVELS.length); }
 aplicarZoom(zoomIdx);
 
-function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush(["marceneiros","items","lembretes","pedidos"]);atualizarBtnPedidos()}
+function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
 function atualizarBtnPedidos() {
   const badge = document.getElementById("pedidosBadge");
   if (!badge) return;
@@ -1294,6 +1295,7 @@ function confirmarDelete(){
       deleteMarcId = null; return;
     }
     if(!deleteId)return;
+    _registrarDelete(deleteId);
     items=items.filter(i=>i.id!==deleteId);
     salvarDados();fecharDeleteMenu();renderHistorico();renderHome();
   });
@@ -1446,9 +1448,9 @@ function carregarSaidas() {
   try { saidasHistorico = JSON.parse(localStorage.getItem("saidasHistorico")) || []; } catch { saidasHistorico = []; }
   try { saidaPrecos = JSON.parse(localStorage.getItem("saidaPrecos")) || {}; } catch { saidaPrecos = {}; }
 }
-function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush("saidas");atualizarBtnSaidas(); }
-function salvarSaidasHistorico() { localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico)); cloudPush("saidasHistorico"); }
-function salvarSaidaPrecos() { localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos)); cloudPush("saidaPrecos"); }
+function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush();atualizarBtnSaidas(); }
+function salvarSaidasHistorico() { localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico)); cloudPush(); }
+function salvarSaidaPrecos() { localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos)); cloudPush(); }
 function _chavePrecoSaida(marceneiroId, nome, largura) {
   return String(marceneiroId) + "||" + (nome || "").toLowerCase().trim() + "||" + String(largura);
 }
@@ -1492,7 +1494,7 @@ let reservas = [];
 function carregarReservas() {
   try { reservas = JSON.parse(localStorage.getItem("reservas")) || []; } catch { reservas = []; }
 }
-function salvarReservas() { localStorage.setItem("reservas", JSON.stringify(reservas)); cloudPush("reservas"); }
+function salvarReservas() { localStorage.setItem("reservas", JSON.stringify(reservas)); cloudPush(); }
 
 function registrarReserva(marceneiroId, nome, largura, qtd, categoria, itemId, cliente) {
   reservas.push({
@@ -1746,6 +1748,7 @@ function retornarReservaEstoque(nome, largura, itemId) {
 function limparReservas() {
   const m = getMarceneiro(); if (!m) return;
   _pedirConfirmacao(`Limpar todas as reservas de ${m.nome}?`, () => {
+    _registrarDelete(reservas.filter(r => r.marceneiroId === m.id).map(r => r.id));
     reservas = reservas.filter(r => r.marceneiroId !== m.id);
     salvarReservas();
     renderReserva();
@@ -2120,6 +2123,7 @@ function limparSaidas() {
       itens: mSaidas.map(s => ({ nome: s.nome, largura: s.largura, qtd: s.qtd }))
     });
     salvarSaidasHistorico();
+    _registrarDelete(saidas.filter(s => s.marceneiroId === m.id).map(s => s.id));
     saidas = saidas.filter(s => s.marceneiroId !== m.id);
     salvarSaidas(); renderSaidas();
     document.getElementById("inputMotorista").value = "";
@@ -3792,6 +3796,8 @@ function excluirPedidoCard() {
   _pedirConfirmacao(
     `Excluir pedido de "${cliente}"${dataFmt ? " · " + dataFmt : ""}?`,
     () => {
+      const _idsDelPed = pedidos.filter(p => p.cliente === cliente && (p.dataEntrega || "") === dataEntrega).map(p => p.id);
+      _registrarDelete(_idsDelPed);
       pedidos = pedidos.filter(p => !(p.cliente === cliente && (p.dataEntrega || "") === dataEntrega));
       salvarDados();
       renderPedidos();
@@ -4100,57 +4106,54 @@ async function cloudPull() {
   }
 }
 
-// cloudPush(campos) — salva APENAS os campos especificados no Firebase
-// O Firestore faz merge nativo: campos de outros usuários não são afetados
-let _pushTimers = {}; // um timer por campo para debounce individual
+// ---- SINCRONIZAÇÃO FIREBASE ----
+// Rastreia IDs deletados para evitar que merges tragam itens de volta
+let _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
+function _registrarDelete(ids) {
+  if (!Array.isArray(ids)) ids = [ids];
+  ids.forEach(id => { if (!_deletedIds.includes(id)) _deletedIds.push(id); });
+  // Mantém só os últimos 500 IDs deletados
+  if (_deletedIds.length > 500) _deletedIds = _deletedIds.slice(-500);
+  localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
+}
+function _filtrarDeletados(arr) {
+  if (!Array.isArray(arr)) return arr;
+  return arr.filter(x => x && x.id && !_deletedIds.includes(x.id));
+}
 
-// Lê o dado atual da memória para cada campo no momento do push
-const _campoParaDado = () => ({
-  marceneiros, items, lembretes, pedidos,
-  saidas, saidasHistorico, saidaPrecos, reservas
-});
+let _pushTimer = null; // timer único de debounce
 
-function cloudPush(campos) {
+function cloudPush() {
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
-  if (!campos) campos = ["marceneiros","items","lembretes","pedidos","saidas","saidasHistorico","saidaPrecos","reservas"];
-  if (!Array.isArray(campos)) campos = [campos];
-
+  clearTimeout(_pushTimer);
   _lastPushId = _deviceId + "_" + Date.now();
-
-  campos.forEach(campo => {
-    clearTimeout(_pushTimers[campo]);
-    _pushTimers[campo] = setTimeout(async () => {
-      if (!workspaceId || !cloudReady) return;
-      // Lê da memória no momento do disparo — inclui dados de outros usuários que chegaram enquanto esperava
-      const valor = JSON.parse(JSON.stringify(_campoParaDado()[campo]));
+  const pushId = _lastPushId;
+  _pushTimer = setTimeout(async () => {
+    if (!workspaceId || !cloudReady) return;
+    try {
+      const { db, doc, updateDoc, setDoc, serverTimestamp } = window.fb;
+      const ref = doc(db, "estoques", workspaceId);
+      const payload = {
+        marceneiros, items, lembretes, pedidos,
+        saidas, saidasHistorico, saidaPrecos, reservas,
+        deletedIds: _deletedIds,
+        updatedAt: serverTimestamp(),
+        lastWriteDeviceId: _deviceId,
+        lastWritePushId: pushId
+      };
       try {
-        const { db, doc, updateDoc, serverTimestamp } = window.fb;
-        await updateDoc(doc(db, "estoques", workspaceId), {
-          [campo]: valor,
-          updatedAt: serverTimestamp(),
-          lastWriteDeviceId: _deviceId,
-          lastWritePushId: _lastPushId
-        });
-        setSyncStatus("online");
+        await updateDoc(ref, payload);
       } catch(e) {
         if (e.code === "not-found") {
-          try {
-            const { db, doc, setDoc, serverTimestamp } = window.fb;
-            await setDoc(doc(db, "estoques", workspaceId), {
-              [campo]: valor,
-              updatedAt: serverTimestamp(),
-              lastWriteDeviceId: _deviceId,
-              lastWritePushId: _lastPushId
-            }, { merge: true });
-            setSyncStatus("online");
-          } catch(e2) { setSyncStatus("error"); }
-        } else {
-          console.error("Erro cloudPush campo=" + campo, e);
-          setSyncStatus("error");
-        }
+          await setDoc(ref, payload);
+        } else throw e;
       }
-    }, 600);
-  });
+      setSyncStatus("online");
+    } catch(e) {
+      console.error("Erro cloudPush:", e);
+      setSyncStatus("error");
+    }
+  }, 600);
 }
 
 // Assina mudanças vindas da nuvem
@@ -4170,18 +4173,30 @@ function cloudSubscribe(){
       return; // é o nosso próprio push chegando de volta, ignorar
     }
     cloudApplyingRemote = true;
-    // Cancelar timers pendentes — evita sobrescrever dados do outro usuário
-    ["marceneiros","items","lembretes","pedidos","saidas","saidasHistorico","saidaPrecos","reservas"].forEach(c => {
-      if (_pushTimers[c]) { clearTimeout(_pushTimers[c]); delete _pushTimers[c]; }
-    });
+    clearTimeout(_pushTimer);
+    // Merge deletedIds remotos com locais
+    if (Array.isArray(data.deletedIds)) {
+      data.deletedIds.forEach(id => { if (!_deletedIds.includes(id)) _deletedIds.push(id); });
+      if (_deletedIds.length > 500) _deletedIds = _deletedIds.slice(-500);
+      localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
+    }
+    // Função de merge: une arrays locais e remotos, filtra deletados, sem duplicatas por ID
+    function _mergeArr(local, remote) {
+      if (!Array.isArray(remote)) return local;
+      if (!Array.isArray(local)) return _filtrarDeletados(remote);
+      const ids = new Set(local.map(x => x.id));
+      const merged = [...local, ...remote.filter(x => x && x.id && !ids.has(x.id))];
+      return _filtrarDeletados(merged);
+    }
+    if (Array.isArray(data.items))       items       = _mergeArr(items, data.items);
+    if (Array.isArray(data.pedidos))     pedidos     = _mergeArr(pedidos, data.pedidos);
+    if (Array.isArray(data.saidas))      saidas      = _mergeArr(saidas, data.saidas);
+    if (Array.isArray(data.reservas))    reservas    = _mergeArr(reservas, data.reservas);
+    if (Array.isArray(data.saidasHistorico)) saidasHistorico = _mergeArr(saidasHistorico, data.saidasHistorico);
+    // Marceneiros e lembretes: aceita remoto direto (raramente editados por 2 ao mesmo tempo)
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
-    if (Array.isArray(data.items))       items       = data.items;
     if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
-    if (Array.isArray(data.saidas))      saidas      = data.saidas;
-    if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
-    if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
     if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-    if (Array.isArray(data.reservas))    reservas    = data.reservas;
     localStorage.setItem("marceneiros",     JSON.stringify(marceneiros));
     localStorage.setItem("items",           JSON.stringify(items));
     localStorage.setItem("lembretes",       JSON.stringify(lembretes));
@@ -4444,6 +4459,7 @@ function _fecharMenuReservaTudo() {
 window.addEventListener("fb-ready", () => {
   const workspaceId = localStorage.getItem("workspaceId");
   localStorage.removeItem("localVersion"); // limpar versão antiga
+  _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
   if (workspaceId){
     cloudReady = true;
     // carrega cache local primeiro (render instantâneo), depois assina nuvem
