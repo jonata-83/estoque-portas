@@ -360,7 +360,7 @@
   <div class="header-inner">
     <button id="btnVoltar" onclick="voltar()">✕</button>
     <div id="headerName" class="header-name"><span id="syncDot" class="offline" title="Status de sincronização"></span>Estoque de portas JL</div>
-    <button id="btnPedidos" onclick="irView('pedidos')" title="Pedidos" style="background:linear-gradient(135deg,#3a7bd5,#2a5aa8);border:none;color:#fff;border-radius:8px;padding:10px 18px;cursor:pointer;font-size:16px;font-family:Georgia,serif;font-weight:bold;flex-shrink:0;display:inline-flex;align-items:center;gap:8px">Pedidos <span id="pedidosBadge" style="display:none;background:#1a1610;color:#ffb84d;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:bold"></span></button>
+
     <button id="btnTema" onclick="toggleTemaPanel(event)">⚙️</button>
     <button id="btnSaidas" onclick="abrirSaidas()" title="Ver Saídas" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">📤</button>
     <button id="btnReserva" onclick="abrirReserva()" title="Reservas" style="background:transparent;border:1px solid #c8a96e44;color:#c8a96e;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:15px;flex-shrink:0;display:none">🔖</button>
@@ -663,8 +663,9 @@
         <span class="home-total-label">Outros</span>
       </div>
     </div>
-    <div class="section-header">
-      <span class="section-title">Marceneiros <span id="versaoLabel" style="font-size:11px;color:var(--text2);letter-spacing:1px;font-weight:normal;font-style:italic"></span></span>
+    <div class="section-header" style="gap:8px">
+      <span class="section-title" style="font-size:14px">Marc. <span id="versaoLabel" style="font-size:11px;color:var(--text2);letter-spacing:1px;font-weight:normal;font-style:italic"></span></span>
+      <button id="btnPedidos" onclick="irView('pedidos')" title="Pedidos" style="background:transparent;border:1px solid #3a7bd566;color:#3a7bd5;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px;font-family:Georgia,serif;font-weight:bold;display:inline-flex;align-items:center;gap:6px;flex-shrink:0">Pedidos <span id="pedidosBadge" style="display:none;background:#1a1610;color:#ffb84d;border-radius:6px;padding:2px 7px;font-size:12px;font-weight:bold"></span></button>
       <button class="btn-add-home" onclick="toggleAddForm()">+ Adicionar</button>
     </div>
     <div class="add-card" id="addCard">
@@ -866,7 +867,7 @@ function irView(view){
   document.getElementById("mainHeader").classList.remove("hidden");
   document.getElementById("headerName").textContent=view==="home"?"Estoque de portas JL":(view==="pedidos"?"Pedidos":(getMarceneiro()?.nome||""));
   document.getElementById("btnVoltar").className=view!=="home"?"show":"";
-  document.getElementById("btnPedidos").style.display=view==="home"?"inline-flex":"none";
+  // btnPedidos is inside secHome, hidden automatically when not on home
   document.getElementById("fab").className=view==="tipo"?"show":"";
   document.getElementById("btnSaidas").style.display=view==="tipo"?"inline-flex":"none";
   const btnRes = document.getElementById("btnReserva");
@@ -2199,9 +2200,16 @@ function _pedirNomeReserva(nome, largura, callback) {
       btn.textContent = `👤 ${cli}`;
       btn.addEventListener("click", () => {
         const cb = _reservaNomeCallback;
-        _reservaNomeCallback = null;
+        const nomeProd = document.getElementById("reservaNomeProduto")?.textContent || "";
         fecharNomeReserva();
-        setTimeout(() => cb(cli), 260);
+        setTimeout(() => {
+          _pedirConfirmacao(
+            `Reservar para "${cli}"${nomeProd ? "\n" + nomeProd : ""}?`,
+            () => cb(cli),
+            "🔖 Reservar",
+            "linear-gradient(135deg,#b8943e,#8a6a20)"
+          );
+        }, 260);
       });
       listaEl.appendChild(btn);
     });
@@ -2226,6 +2234,19 @@ function fecharNomeReserva() {
 
 function confirmarNomeReserva() {
   const cliente = (document.getElementById("reservaNomeInput").value || "").trim();
+  if (!cliente) {
+    const inp = document.getElementById("reservaNomeInput");
+    inp.style.borderColor = "var(--danger)";
+    inp.style.boxShadow = "0 0 0 3px #e0505044";
+    inp.placeholder = "⚠️ Nome obrigatório!";
+    inp.focus();
+    setTimeout(() => {
+      inp.style.borderColor = "var(--border2)";
+      inp.style.boxShadow = "";
+      inp.placeholder = "Novo cliente…";
+    }, 2000);
+    return;
+  }
   const cb = _reservaNomeCallback;
   _reservaNomeCallback = null;
   fecharNomeReserva();
@@ -4080,7 +4101,7 @@ async function cloudPull() {
 // O Firestore faz merge nativo: campos de outros usuários não são afetados
 let _pushTimers = {}; // um timer por campo para debounce individual
 
-// Mapa de leitura de dados por campo — lê da memória no momento do push
+// Lê o dado atual da memória para cada campo no momento do push
 const _campoParaDado = () => ({
   marceneiros, items, lembretes, pedidos,
   saidas, saidasHistorico, saidaPrecos, reservas
@@ -4097,8 +4118,7 @@ function cloudPush(campos) {
     clearTimeout(_pushTimers[campo]);
     _pushTimers[campo] = setTimeout(async () => {
       if (!workspaceId || !cloudReady) return;
-      // Lê o valor DA MEMÓRIA ATUAL no momento do disparo
-      // (inclui qualquer dado de outros usuários que chegou enquanto o timer esperava)
+      // Lê da memória no momento do disparo — inclui dados de outros usuários que chegaram enquanto esperava
       const valor = JSON.parse(JSON.stringify(_campoParaDado()[campo]));
       try {
         const { db, doc, updateDoc, serverTimestamp } = window.fb;
@@ -4147,8 +4167,7 @@ function cloudSubscribe(){
       return; // é o nosso próprio push chegando de volta, ignorar
     }
     cloudApplyingRemote = true;
-    // Cancelar timers pendentes dos campos que vêm do remoto
-    // (evita que push antigo sobrescreva dados novos do outro usuário)
+    // Cancelar timers pendentes — evita sobrescrever dados do outro usuário
     ["marceneiros","items","lembretes","pedidos","saidas","saidasHistorico","saidaPrecos","reservas"].forEach(c => {
       if (_pushTimers[c]) { clearTimeout(_pushTimers[c]); delete _pushTimers[c]; }
     });
