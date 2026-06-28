@@ -764,8 +764,8 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp,
-    arrayUnion, arrayRemove
+    getFirestore, doc, collection, setDoc, updateDoc, deleteDoc,
+    getDoc, getDocs, onSnapshot, serverTimestamp, writeBatch
   } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -784,12 +784,12 @@
   // enableIndexedDbPersistence desabilitado pois causa snapshots com dados stale
 
   // Expor para o código principal
-  window.fb = { db, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp, arrayUnion, arrayRemove };
+  window.fb = { db, doc, collection, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, serverTimestamp, writeBatch };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
 <script>
-const VERSAO = "v18";
+const VERSAO = "v19";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -840,7 +840,15 @@ function aplicarZoom(idx){
 function ciclarZoom(){ aplicarZoom((zoomIdx + 1) % ZOOM_LEVELS.length); }
 aplicarZoom(zoomIdx);
 
-function salvarDados(){localStorage.setItem("marceneiros",JSON.stringify(marceneiros));localStorage.setItem("items",JSON.stringify(items));localStorage.setItem("lembretes",JSON.stringify(lembretes));localStorage.setItem("pedidos",JSON.stringify(pedidos));cloudPush();atualizarBtnPedidos()}
+function salvarDados(){
+  localStorage.setItem("marceneiros",JSON.stringify(marceneiros));
+  localStorage.setItem("items",JSON.stringify(items));
+  localStorage.setItem("lembretes",JSON.stringify(lembretes));
+  localStorage.setItem("pedidos",JSON.stringify(pedidos));
+  cloudPush(); // salva marceneiros, lembretes, pedidos no doc principal
+  cloudPushItems(items, null); // salva items na subcoleção
+  atualizarBtnPedidos();
+}
 function atualizarBtnPedidos() {
   const badge = document.getElementById("pedidosBadge");
   if (!badge) return;
@@ -1295,9 +1303,11 @@ function confirmarDelete(){
       deleteMarcId = null; return;
     }
     if(!deleteId)return;
-    _registrarDelete(deleteId);
     items=items.filter(i=>i.id!==deleteId);
-    salvarDados();fecharDeleteMenu();renderHistorico();renderHome();
+    localStorage.setItem("items",JSON.stringify(items));
+    cloudPushItems(items, [deleteId]); // deleta da subcoleção
+    cloudPush(); // atualiza doc principal
+    fecharDeleteMenu();renderHistorico();renderHome();
   });
 }
 
@@ -1748,7 +1758,6 @@ function retornarReservaEstoque(nome, largura, itemId) {
 function limparReservas() {
   const m = getMarceneiro(); if (!m) return;
   _pedirConfirmacao(`Limpar todas as reservas de ${m.nome}?`, () => {
-    _registrarDelete(reservas.filter(r => r.marceneiroId === m.id).map(r => r.id));
     reservas = reservas.filter(r => r.marceneiroId !== m.id);
     salvarReservas();
     renderReserva();
@@ -2123,7 +2132,6 @@ function limparSaidas() {
       itens: mSaidas.map(s => ({ nome: s.nome, largura: s.largura, qtd: s.qtd }))
     });
     salvarSaidasHistorico();
-    _registrarDelete(saidas.filter(s => s.marceneiroId === m.id).map(s => s.id));
     saidas = saidas.filter(s => s.marceneiroId !== m.id);
     salvarSaidas(); renderSaidas();
     document.getElementById("inputMotorista").value = "";
@@ -3797,7 +3805,6 @@ function excluirPedidoCard() {
     `Excluir pedido de "${cliente}"${dataFmt ? " · " + dataFmt : ""}?`,
     () => {
       const _idsDelPed = pedidos.filter(p => p.cliente === cliente && (p.dataEntrega || "") === dataEntrega).map(p => p.id);
-      _registrarDelete(_idsDelPed);
       pedidos = pedidos.filter(p => !(p.cliente === cliente && (p.dataEntrega || "") === dataEntrega));
       salvarDados();
       renderPedidos();
@@ -4107,98 +4114,102 @@ async function cloudPull() {
 }
 
 // ---- SINCRONIZAÇÃO FIREBASE ----
-// Rastreia IDs deletados para evitar que merges tragam itens de volta
-let _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
-function _registrarDelete(ids) {
-  if (!Array.isArray(ids)) ids = [ids];
-  ids.forEach(id => { if (!_deletedIds.includes(id)) _deletedIds.push(id); });
-  // Mantém só os últimos 500 IDs deletados
-  if (_deletedIds.length > 500) _deletedIds = _deletedIds.slice(-500);
-  localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
-}
-function _filtrarDeletados(arr) {
-  if (!Array.isArray(arr)) return arr;
-  return arr.filter(x => x && x.id && !_deletedIds.includes(x.id));
+// items são salvos como subcoleção: /estoques/WS/items/ITEM_ID
+// Assim cada dispositivo escreve no seu próprio item sem sobrescrever os outros
+let _pushTimer = null;
+let _itemsPushTimer = null;
+
+// Salva dados globais (marceneiros, lembretes, pedidos, saidas, reservas, saidaPrecos)
+async function _pushGlobal() {
+  if (!workspaceId || !cloudReady) return;
+  try {
+    const { db, doc, updateDoc, setDoc, serverTimestamp } = window.fb;
+    const ref = doc(db, "estoques", workspaceId);
+    const payload = {
+      marceneiros, lembretes, pedidos,
+      saidas, saidasHistorico, saidaPrecos, reservas,
+      updatedAt: serverTimestamp(),
+      lastWriteDeviceId: _deviceId,
+      lastWritePushId: _lastPushId
+    };
+    try { await updateDoc(ref, payload); }
+    catch(e) { if (e.code === "not-found") await setDoc(ref, payload); else throw e; }
+    setSyncStatus("online");
+  } catch(e) { console.error("Erro _pushGlobal:", e); setSyncStatus("error"); }
 }
 
-let _pushTimer = null; // timer único de debounce
+// Salva items como subcoleção — cada item é um documento separado
+async function _pushItems(itemsParaSalvar, idsParaDeletar) {
+  if (!workspaceId || !cloudReady) return;
+  try {
+    const { db, doc, collection, setDoc, deleteDoc, writeBatch, serverTimestamp } = window.fb;
+    const colRef = collection(db, "estoques", workspaceId, "items");
+    const batch = writeBatch(db);
+    // Upsert dos items modificados
+    if (Array.isArray(itemsParaSalvar)) {
+      itemsParaSalvar.forEach(item => {
+        const ref = doc(colRef, String(item.id));
+        batch.set(ref, { ...item, _deviceId, _updatedAt: Date.now() });
+      });
+    }
+    // Delete dos items removidos
+    if (Array.isArray(idsParaDeletar)) {
+      idsParaDeletar.forEach(id => {
+        const ref = doc(colRef, String(id));
+        batch.delete(ref);
+      });
+    }
+    await batch.commit();
+    setSyncStatus("online");
+  } catch(e) { console.error("Erro _pushItems:", e); setSyncStatus("error"); }
+}
 
-function cloudPush() {
+function cloudPush(campos) {
   if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
   clearTimeout(_pushTimer);
   _lastPushId = _deviceId + "_" + Date.now();
-  const pushId = _lastPushId;
-  _pushTimer = setTimeout(async () => {
-    if (!workspaceId || !cloudReady) return;
-    try {
-      const { db, doc, updateDoc, setDoc, serverTimestamp } = window.fb;
-      const ref = doc(db, "estoques", workspaceId);
-      const payload = {
-        marceneiros, items, lembretes, pedidos,
-        saidas, saidasHistorico, saidaPrecos, reservas,
-        deletedIds: _deletedIds,
-        updatedAt: serverTimestamp(),
-        lastWriteDeviceId: _deviceId,
-        lastWritePushId: pushId
-      };
-      try {
-        await updateDoc(ref, payload);
-      } catch(e) {
-        if (e.code === "not-found") {
-          await setDoc(ref, payload);
-        } else throw e;
-      }
-      setSyncStatus("online");
-    } catch(e) {
-      console.error("Erro cloudPush:", e);
-      setSyncStatus("error");
-    }
-  }, 600);
+  _pushTimer = setTimeout(() => _pushGlobal(), 600);
+}
+
+// Chamado ao salvar items (adicionar/editar/excluir)
+function cloudPushItems(novosOuEditados, idsExcluidos) {
+  if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
+  clearTimeout(_itemsPushTimer);
+  const snap_novos = novosOuEditados ? JSON.parse(JSON.stringify(novosOuEditados)) : null;
+  const snap_ids   = idsExcluidos ? [...idsExcluidos] : null;
+  _itemsPushTimer = setTimeout(() => _pushItems(snap_novos, snap_ids), 600);
 }
 
 // Assina mudanças vindas da nuvem
+let cloudUnsubItems = null; // unsub da subcoleção de items
+
 function cloudSubscribe(){
   if (!workspaceId || !window.fb) return;
-  const { db, doc, onSnapshot } = window.fb;
+  const { db, doc, collection, onSnapshot } = window.fb;
   if (cloudUnsub) cloudUnsub();
+  if (cloudUnsubItems) cloudUnsubItems();
+
+  // 1. Assinar o documento principal (marceneiros, lembretes, pedidos, saidas, reservas)
   cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
     if (!snap.exists()) { setSyncStatus("online"); return; }
     const data = snap.data();
-    // Ignorar snapshots que vieram do NOSSO próprio dispositivo
-    // (o Firebase devolve nosso próprio push como snapshot — não queremos sobrescrever nossos dados)
     const snapDeviceId = data.lastWriteDeviceId || null;
     const snapPushId   = data.lastWritePushId   || null;
+    // Ignorar apenas se for exatamente o nosso push mais recente
     if (snapDeviceId === _deviceId && snapPushId === _lastPushId) {
-      setSyncStatus("online");
-      return; // é o nosso próprio push chegando de volta, ignorar
+      setSyncStatus("online"); return;
     }
     cloudApplyingRemote = true;
     clearTimeout(_pushTimer);
-    // Merge deletedIds remotos com locais
-    if (Array.isArray(data.deletedIds)) {
-      data.deletedIds.forEach(id => { if (!_deletedIds.includes(id)) _deletedIds.push(id); });
-      if (_deletedIds.length > 500) _deletedIds = _deletedIds.slice(-500);
-      localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
-    }
-    // Função de merge: une arrays locais e remotos, filtra deletados, sem duplicatas por ID
-    function _mergeArr(local, remote) {
-      if (!Array.isArray(remote)) return local;
-      if (!Array.isArray(local)) return _filtrarDeletados(remote);
-      const ids = new Set(local.map(x => x.id));
-      const merged = [...local, ...remote.filter(x => x && x.id && !ids.has(x.id))];
-      return _filtrarDeletados(merged);
-    }
-    if (Array.isArray(data.items))       items       = _mergeArr(items, data.items);
-    if (Array.isArray(data.pedidos))     pedidos     = _mergeArr(pedidos, data.pedidos);
-    if (Array.isArray(data.saidas))      saidas      = _mergeArr(saidas, data.saidas);
-    if (Array.isArray(data.reservas))    reservas    = _mergeArr(reservas, data.reservas);
-    if (Array.isArray(data.saidasHistorico)) saidasHistorico = _mergeArr(saidasHistorico, data.saidasHistorico);
-    // Marceneiros e lembretes: aceita remoto direto (raramente editados por 2 ao mesmo tempo)
+    // Aplicar dados globais (sem items — esses vêm da subcoleção)
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
     if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
     if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
+    if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
+    if (Array.isArray(data.saidas))      saidas      = data.saidas;
+    if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
+    if (Array.isArray(data.reservas))    reservas    = data.reservas;
     localStorage.setItem("marceneiros",     JSON.stringify(marceneiros));
-    localStorage.setItem("items",           JSON.stringify(items));
     localStorage.setItem("lembretes",       JSON.stringify(lembretes));
     localStorage.setItem("saidas",          JSON.stringify(saidas));
     localStorage.setItem("pedidos",         JSON.stringify(pedidos));
@@ -4207,16 +4218,37 @@ function cloudSubscribe(){
     localStorage.setItem("reservas",        JSON.stringify(reservas));
     cloudApplyingRemote = false;
     setSyncStatus("online");
-    // re-render do que estiver visível
     try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); else if (viewAtual === "pedidos") renderPedidos(); } catch(e){}
-    atualizarBtnSaidas();
-    atualizarBtnPedidos();
+    atualizarBtnSaidas(); atualizarBtnPedidos();
   }, (err) => {
-    console.error("Erro snapshot:", err);
-    // Não mostra vermelho — reconecta silenciosamente
-    setTimeout(() => {
-      if (workspaceId && cloudReady) cloudSubscribe();
-    }, 5000);
+    console.error("Erro snapshot doc:", err);
+    setTimeout(() => { if (workspaceId && cloudReady) cloudSubscribe(); }, 5000);
+  });
+
+  // 2. Assinar a subcoleção de items — cada mudança de item dispara aqui
+  cloudUnsubItems = onSnapshot(collection(db, "estoques", workspaceId, "items"), (snapshot) => {
+    snapshot.docChanges().forEach(change => {
+      const itemData = change.doc.data();
+      const itemId = itemData.id || Number(change.doc.id);
+      if (change.type === "removed") {
+        // Item deletado por outro usuário
+        items = items.filter(i => String(i.id) !== String(itemId));
+      } else {
+        // Item adicionado ou modificado por outro usuário
+        if (itemData._deviceId === _deviceId) return; // nosso próprio item, ignorar
+        const idx = items.findIndex(i => String(i.id) === String(itemId));
+        const { _deviceId: _d, _updatedAt: _u, ...itemLimpo } = itemData;
+        if (idx === -1) {
+          items.push(itemLimpo); // novo item de outro usuário
+        } else {
+          items[idx] = itemLimpo; // item editado por outro usuário
+        }
+      }
+    });
+    localStorage.setItem("items", JSON.stringify(items));
+    try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); } catch(e){}
+  }, (err) => {
+    console.error("Erro snapshot items:", err);
   });
 }
 
@@ -4244,7 +4276,26 @@ async function criarWorkspace(estadoInicial){
   const codigo = gerarCodigoWorkspace();
   try {
     const { db, doc, setDoc, serverTimestamp } = window.fb;
-    await setDoc(doc(db, "estoques", codigo), { ...estadoInicial, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    const wsRef = doc(db, "estoques", codigo);
+    await setDoc(wsRef, {
+      marceneiros: estadoInicial.marceneiros,
+      lembretes: estadoInicial.lembretes,
+      pedidos: estadoInicial.pedidos || [],
+      saidas: estadoInicial.saidas || [],
+      saidasHistorico: estadoInicial.saidasHistorico || [],
+      saidaPrecos: estadoInicial.saidaPrecos || {},
+      reservas: estadoInicial.reservas || [],
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+    // Salvar items na subcoleção
+    if (Array.isArray(estadoInicial.items) && estadoInicial.items.length) {
+      const colRef = collection(db, "estoques", codigo, "items");
+      const batch2 = writeBatch(db);
+      estadoInicial.items.forEach(item => {
+        batch2.set(doc(colRef, String(item.id)), { ...item, _deviceId, _updatedAt: Date.now() });
+      });
+      await batch2.commit();
+    }
     workspaceId = codigo;
     localStorage.setItem("workspaceId", codigo);
     cloudReady = true;
@@ -4327,7 +4378,7 @@ function conectarComCodigo(){
 async function conectarAEstoque(codigo){
   if (!window.fb){ alert("Aguarde, conexão ainda carregando..."); return; }
   try {
-    const { db, doc, getDoc } = window.fb;
+    const { db, doc, getDoc, getDocs, collection } = window.fb;
     const snap = await getDoc(doc(db, "estoques", codigo));
     if (!snap.exists()){
       document.getElementById("scannerErr").textContent = "Código inválido — estoque não encontrado.";
@@ -4338,6 +4389,16 @@ async function conectarAEstoque(codigo){
     localStorage.setItem("workspaceId", codigo);
     cloudReady = true;
     fecharScanner(); fecharSetup();
+    // Carregar items da subcoleção ao conectar
+    try {
+      const colSnap = await getDocs(collection(db, "estoques", codigo, "items"));
+      items = [];
+      colSnap.forEach(d => {
+        const { _deviceId: _d, _updatedAt: _u, ...itemLimpo } = d.data();
+        items.push(itemLimpo);
+      });
+      localStorage.setItem("items", JSON.stringify(items));
+    } catch(e) { console.error("Erro ao carregar items:", e); }
     cloudSubscribe();
   } catch(e){ console.error(e); document.getElementById("scannerErr").textContent = "Erro: " + e.message; }
 }
@@ -4462,9 +4523,27 @@ window.addEventListener("fb-ready", () => {
   _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
   if (workspaceId){
     cloudReady = true;
-    // carrega cache local primeiro (render instantâneo), depois assina nuvem
+    // carrega cache local primeiro (render instantâneo)
     carregarDados(); carregarSaidas(); carregarReservas(); renderHome(); atualizarBtnPedidos();
+    // Assina nuvem (inclui subcoleção de items)
     cloudSubscribe();
+    // Carrega items da subcoleção na inicialização para garantir dados atualizados
+    setTimeout(async () => {
+      try {
+        const { db, collection, getDocs, doc } = window.fb;
+        const colSnap = await getDocs(collection(db, "estoques", workspaceId, "items"));
+        if (!colSnap.empty) {
+          items = [];
+          colSnap.forEach(d => {
+            const { _deviceId: _dd, _updatedAt: _uu, ...itemLimpo } = d.data();
+            items.push(itemLimpo);
+          });
+          localStorage.setItem("items", JSON.stringify(items));
+          if (viewAtual === "home") renderHome();
+          else if (viewAtual === "tipo") renderHistorico();
+        }
+      } catch(e) { console.error("Erro ao carregar items na init:", e); }
+    }, 1000);
   } else {
     mostrarSetup();
   }
