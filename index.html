@@ -764,7 +764,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp
+    getFirestore, doc, setDoc, getDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -783,12 +783,12 @@
   // enableIndexedDbPersistence desabilitado pois causa snapshots com dados stale
 
   // Expor para o código principal
-  window.fb = { db, doc, setDoc, updateDoc, getDoc, onSnapshot, serverTimestamp };
+  window.fb = { db, doc, setDoc, getDoc, serverTimestamp };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
 <script>
-const VERSAO = "v21";
+const VERSAO = "v22";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -4030,7 +4030,7 @@ function excluirPedido(id) {
 // ===========================================================
 
 let workspaceId = localStorage.getItem("workspaceId") || null;
-let cloudUnsub = null;
+// cloudUnsub removed (no onSnapshot)
 let cloudReady = false;
 let cloudApplyingRemote = false;     // evita loop quando aplicamos dados vindos do snapshot
 let localVersion = parseInt(localStorage.getItem("localVersion") || "0"); // contador incremental de edições locais
@@ -4059,56 +4059,14 @@ const _deviceId = (() => {
   if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("deviceId", id); }
   return id;
 })();
-let _lastPushId = null; // ID do último push que fizemos — para ignorar nosso próprio snapshot
 
-// Força uma leitura imediata da nuvem
-async function cloudPull() {
-  if (!workspaceId || !window.fb) return;
-  setSyncStatus("syncing");
-  try {
-    const { db, doc, getDoc } = window.fb;
-    const snap = await getDoc(doc(db, "estoques", workspaceId));
-    if (!snap.exists()) { setSyncStatus("online"); return; }
-    const data = snap.data();
-    cloudApplyingRemote = true;
-    // cloudPull força atualização completa — aceita todos os dados remotos
-    if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
-    const _pulledItems = _mergeAllItems(data);
-    if (_pulledItems.length > 0) items = _pulledItems;
-    else if (Array.isArray(data.items) && data.items.length > 0) items = data.items;
-    if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
-    if (Array.isArray(data.saidas))      saidas      = data.saidas;
-    if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
-    if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
-    if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-    if (Array.isArray(data.reservas)) reservas = data.reservas;
-    localStorage.setItem("marceneiros",     JSON.stringify(marceneiros));
-    localStorage.setItem("items",           JSON.stringify(items));
-    localStorage.setItem("lembretes",       JSON.stringify(lembretes));
-    localStorage.setItem("saidas",          JSON.stringify(saidas));
-    localStorage.setItem("pedidos",         JSON.stringify(pedidos));
-    localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
-    localStorage.setItem("saidaPrecos",     JSON.stringify(saidaPrecos));
-    localStorage.setItem("reservas",        JSON.stringify(reservas));
-    cloudApplyingRemote = false;
-    setSyncStatus("online");
-    if (viewAtual === "home") renderHome();
-    else if (viewAtual === "tipo") renderHistorico();
-    else if (viewAtual === "pedidos") renderPedidos();
-    renderHome();
-    atualizarBtnSaidas();
-    atualizarBtnPedidos();
-  } catch(e) {
-    console.error("cloudPull error:", e);
-    setSyncStatus("error");
-  }
-}
+// ---- FIREBASE: ARMAZENAMENTO SIMPLES (sem tempo real) ----
+// Salva ao modificar, lê ao abrir ou ao apertar 🔄
+// Sem onSnapshot — sem conflito, sem dados sumindo
 
-// ---- SINCRONIZAÇÃO FIREBASE ----
-// Cada dispositivo salva seus items no campo "items_DEVICEID"
-// Sem conflito entre usuários — cada um escreve apenas no seu campo
-let _pushTimer = null;
 let _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
+let _pushTimer = null;
+let _isSaving = false;
 
 function _registrarDelete(ids) {
   if (!Array.isArray(ids)) ids = [ids];
@@ -4117,88 +4075,95 @@ function _registrarDelete(ids) {
   localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
 }
 
-function _mergeAllItems(data) {
-  // Lê todos os campos items_* do documento e faz union por ID
-  const all = {};
-  Object.keys(data).forEach(key => {
-    if (key.startsWith("items_") && Array.isArray(data[key])) {
-      data[key].forEach(item => {
-        if (item && item.id && !_deletedIds.includes(String(item.id))) {
-          all[String(item.id)] = item;
-        }
-      });
-    }
-  });
-  return Object.values(all);
+// Merge seguro: une dados locais com dados do Firebase
+// Dados locais têm prioridade (mais recentes), dados remotos complementam
+function _mergeComRemoto(local, remoto, campo) {
+  if (!Array.isArray(remoto)) return local;
+  if (!Array.isArray(local)) return remoto.filter(i => i && i.id && !_deletedIds.includes(String(i.id)));
+  const localIds = new Set(local.map(i => String(i.id)));
+  // Adiciona itens do remoto que não existem localmente e não foram deletados
+  const novosDoRemoto = remoto.filter(i => i && i.id && !localIds.has(String(i.id)) && !_deletedIds.includes(String(i.id)));
+  return [...local, ...novosDoRemoto];
 }
 
-function cloudPush() {
-  if (!workspaceId || !cloudReady || cloudApplyingRemote) return;
+async function cloudPush() {
+  if (!workspaceId || !cloudReady || _isSaving) return;
   clearTimeout(_pushTimer);
-  _lastPushId = _deviceId + "_" + Date.now();
-  const pushId = _lastPushId;
   _pushTimer = setTimeout(async () => {
-    if (!workspaceId || !cloudReady) return;
+    _isSaving = true;
+    setSyncStatus("syncing");
     try {
-      const { db, doc, updateDoc, setDoc, serverTimestamp } = window.fb;
+      const { db, doc, getDoc, setDoc, serverTimestamp } = window.fb;
       const ref = doc(db, "estoques", workspaceId);
-      // Salva items do nosso dispositivo no campo "items_DEVICEID"
-      // Os campos items_ de outros dispositivos não são afetados (updateDoc)
+      // 1. Lê o estado atual do Firebase
+      let remoto = {};
+      try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) remoto = snap.data();
+      } catch(e) { /* offline — salva local e tenta depois */ }
+      // 2. Merge: une dados locais com remotos
       const payload = {
-        ["items_" + _deviceId]: items,
-        deletedIds: _deletedIds,
-        marceneiros, lembretes, pedidos,
-        saidas, saidasHistorico, saidaPrecos, reservas,
-        updatedAt: serverTimestamp(),
-        lastWriteDeviceId: _deviceId,
-        lastWritePushId: pushId
+        items:           _mergeComRemoto(items,           remoto.items,           "items"),
+        marceneiros,
+        lembretes,
+        pedidos:         _mergeComRemoto(pedidos,         remoto.pedidos,         "pedidos"),
+        saidas:          _mergeComRemoto(saidas,          remoto.saidas,          "saidas"),
+        saidasHistorico: _mergeComRemoto(saidasHistorico, remoto.saidasHistorico, "saidasHistorico"),
+        saidaPrecos,
+        reservas:        _mergeComRemoto(reservas,        remoto.reservas,        "reservas"),
+        deletedIds:      _deletedIds,
+        updatedAt:       serverTimestamp()
       };
-      try { await updateDoc(ref, payload); }
-      catch(e) { if (e.code === "not-found") await setDoc(ref, payload); else throw e; }
+      // 3. Grava o resultado
+      await setDoc(ref, payload);
+      // 4. Atualiza memória local com o merge (pode ter itens novos de outros usuários)
+      items           = payload.items;
+      pedidos         = payload.pedidos;
+      saidas          = payload.saidas;
+      saidasHistorico = payload.saidasHistorico;
+      reservas        = payload.reservas;
+      localStorage.setItem("items",           JSON.stringify(items));
+      localStorage.setItem("pedidos",         JSON.stringify(pedidos));
+      localStorage.setItem("saidas",          JSON.stringify(saidas));
+      localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
+      localStorage.setItem("reservas",        JSON.stringify(reservas));
       setSyncStatus("online");
-    } catch(e) { console.error("Erro cloudPush:", e); setSyncStatus("error"); }
-  }, 600);
+    } catch(e) {
+      console.error("Erro cloudPush:", e);
+      setSyncStatus("error");
+    } finally {
+      _isSaving = false;
+    }
+  }, 800);
 }
 
 // Assina mudanças vindas da nuvem
-function cloudSubscribe(){
+// Lê dados do Firebase e atualiza a tela (chamado ao abrir app e ao apertar 🔄)
+async function cloudPull() {
   if (!workspaceId || !window.fb) return;
-  const { db, doc, onSnapshot } = window.fb;
-  if (cloudUnsub) cloudUnsub();
-
-  cloudUnsub = onSnapshot(doc(db, "estoques", workspaceId), (snap) => {
+  setSyncStatus("syncing");
+  try {
+    const { db, doc, getDoc } = window.fb;
+    const snap = await getDoc(doc(db, "estoques", workspaceId));
     if (!snap.exists()) { setSyncStatus("online"); return; }
     const data = snap.data();
-    const snapDeviceId = data.lastWriteDeviceId || null;
-    const snapPushId   = data.lastWritePushId   || null;
-    // Ignorar somente o nosso próprio push exato
-    if (snapDeviceId === _deviceId && snapPushId === _lastPushId) {
-      setSyncStatus("online"); return;
-    }
-    cloudApplyingRemote = true;
-    clearTimeout(_pushTimer);
-    // Merge deletedIds remotos
+    // Merge deletedIds remotos com locais
     if (Array.isArray(data.deletedIds)) {
       data.deletedIds.forEach(id => { if (!_deletedIds.includes(String(id))) _deletedIds.push(String(id)); });
       localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
     }
-    // Merge de todos os campos items_* (de todos os dispositivos)
-    const itemsMerged = _mergeAllItems(data);
-    if (itemsMerged.length > 0 || Object.keys(data).some(k => k.startsWith("items_"))) {
-      // Preservar nossos próprios items que não estão no Firebase ainda (push pendente)
-      const nossosIds = new Set(items.filter(i => i.id).map(i => String(i.id)));
-      const itemsRemotosNovos = itemsMerged.filter(i => !nossosIds.has(String(i.id)));
-      items = [...items.filter(i => !_deletedIds.includes(String(i.id))), ...itemsRemotosNovos];
+    // Aplicar dados remotos com merge onde necessário
+    if (Array.isArray(data.items)) {
+      items = _mergeComRemoto(items, data.items, "items");
       localStorage.setItem("items", JSON.stringify(items));
     }
-    // Dados globais
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
     if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
     if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-    if (Array.isArray(data.pedidos))     pedidos     = data.pedidos;
-    if (Array.isArray(data.saidas))      saidas      = data.saidas;
-    if (Array.isArray(data.saidasHistorico)) saidasHistorico = data.saidasHistorico;
-    if (Array.isArray(data.reservas))    reservas    = data.reservas;
+    if (Array.isArray(data.pedidos))     { pedidos = _mergeComRemoto(pedidos, data.pedidos, "pedidos"); }
+    if (Array.isArray(data.saidas))      { saidas  = _mergeComRemoto(saidas,  data.saidas,  "saidas");  }
+    if (Array.isArray(data.saidasHistorico)) { saidasHistorico = _mergeComRemoto(saidasHistorico, data.saidasHistorico, "saidasHistorico"); }
+    if (Array.isArray(data.reservas))    { reservas = _mergeComRemoto(reservas, data.reservas, "reservas"); }
     localStorage.setItem("marceneiros",     JSON.stringify(marceneiros));
     localStorage.setItem("lembretes",       JSON.stringify(lembretes));
     localStorage.setItem("saidas",          JSON.stringify(saidas));
@@ -4206,15 +4171,17 @@ function cloudSubscribe(){
     localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
     localStorage.setItem("saidaPrecos",     JSON.stringify(saidaPrecos));
     localStorage.setItem("reservas",        JSON.stringify(reservas));
-    cloudApplyingRemote = false;
     setSyncStatus("online");
     try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); else if (viewAtual === "pedidos") renderPedidos(); } catch(e){}
     atualizarBtnSaidas(); atualizarBtnPedidos();
-  }, (err) => {
-    console.error("Erro snapshot:", err);
-    setTimeout(() => { if (workspaceId && cloudReady) cloudSubscribe(); }, 5000);
-  });
+  } catch(e) {
+    console.error("Erro cloudPull:", e);
+    setSyncStatus("error");
+  }
 }
+
+// cloudSubscribe agora é apenas um alias para cloudPull (sem onSnapshot)
+function cloudSubscribe() { cloudPull(); }
 
 // ============ TELA DE SETUP ============
 function mostrarSetup(){
@@ -4242,7 +4209,7 @@ async function criarWorkspace(estadoInicial){
     const { db, doc, setDoc, serverTimestamp } = window.fb;
     const wsRef = doc(db, "estoques", codigo);
     await setDoc(wsRef, {
-      ["items_" + _deviceId]: estadoInicial.items || [],
+      items: estadoInicial.items || [],
       deletedIds: [],
       marceneiros: estadoInicial.marceneiros,
       lembretes: estadoInicial.lembretes,
@@ -4346,20 +4313,7 @@ async function conectarAEstoque(codigo){
     localStorage.setItem("workspaceId", codigo);
     cloudReady = true;
     fecharScanner(); fecharSetup();
-    // Carregar items do documento ao conectar
-    try {
-      const { getDoc: _gdc2, doc: _doc3 } = window.fb;
-      const docSnap3 = await _gdc2(_doc3(db, "estoques", codigo));
-      if (docSnap3.exists()) {
-        items = _mergeAllItems(docSnap3.data());
-        // Migração: se não há items_* mas há campo items antigo, migra
-        if (items.length === 0 && Array.isArray(docSnap3.data().items)) {
-          items = docSnap3.data().items;
-        }
-        localStorage.setItem("items", JSON.stringify(items));
-      }
-    } catch(e) { console.error("Erro ao carregar items:", e); }
-    cloudSubscribe();
+    cloudSubscribe(); // faz getDoc e carrega todos os dados
   } catch(e){ console.error(e); document.getElementById("scannerErr").textContent = "Erro: " + e.message; }
 }
 
@@ -4367,7 +4321,6 @@ async function conectarAEstoque(codigo){
 function verQRAtual(){ if (workspaceId) abrirQRCode(workspaceId, false); }
 function trocarEstoque(){
   if (!confirm("Desconectar deste estoque? Os dados continuam na nuvem; você poderá voltar com o mesmo código.")) return;
-  if (cloudUnsub) cloudUnsub();
   localStorage.removeItem("workspaceId");
   workspaceId = null; cloudReady = false;
   location.reload();
@@ -4487,34 +4440,8 @@ window.addEventListener("fb-ready", () => {
     carregarDados(); carregarSaidas(); carregarReservas(); renderHome(); atualizarBtnPedidos();
     // Assina nuvem (inclui subcoleção de items)
     cloudSubscribe();
-    // Carrega items do Firebase na inicialização (merge de todos dispositivos + migração)
-    setTimeout(async () => {
-      try {
-        const { db, getDoc, updateDoc, doc: _doc } = window.fb;
-        const docSnap = await getDoc(_doc(db, "estoques", workspaceId));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const itemsMerged = _mergeAllItems(data);
-          if (itemsMerged.length > 0) {
-            // Tem items no formato novo (items_DEVICEID)
-            items = itemsMerged;
-          } else if (Array.isArray(data.items) && data.items.length > 0) {
-            // Migração: formato antigo (campo items único)
-            items = data.items.filter(i => i && i.id && !_deletedIds.includes(String(i.id)));
-            // Salva no novo formato
-            try {
-              await updateDoc(_doc(db, "estoques", workspaceId), {
-                ["items_" + _deviceId]: items,
-                deletedIds: _deletedIds
-              });
-            } catch(e2) { console.error("Erro migração:", e2); }
-          }
-          localStorage.setItem("items", JSON.stringify(items));
-          if (viewAtual === "home") renderHome();
-          else if (viewAtual === "tipo") renderHistorico();
-        }
-      } catch(e) { console.error("Erro ao carregar items:", e); }
-    }, 500);
+    // Lê dados do Firebase ao abrir (merge com localStorage)
+    setTimeout(() => cloudPull(), 500);
   } else {
     mostrarSetup();
   }
@@ -4525,9 +4452,7 @@ window.addEventListener("online", () => {
   if (workspaceId && cloudReady) {
     setSyncStatus("syncing");
     // Pequeno delay para garantir que a conexão estabilizou
-    setTimeout(() => {
-      cloudSubscribe();
-    }, 1500);
+    setTimeout(() => cloudPull(), 1500);
   }
 });
 window.addEventListener("offline", () => {
