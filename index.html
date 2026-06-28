@@ -789,7 +789,7 @@
 </script>
 
 <script>
-const VERSAO = "v19";
+const VERSAO = "v20";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -4389,15 +4389,34 @@ async function conectarAEstoque(codigo){
     localStorage.setItem("workspaceId", codigo);
     cloudReady = true;
     fecharScanner(); fecharSetup();
-    // Carregar items da subcoleção ao conectar
+    // Carregar items da subcoleção ao conectar (ou migrar do doc principal)
     try {
-      const colSnap = await getDocs(collection(db, "estoques", codigo, "items"));
-      items = [];
-      colSnap.forEach(d => {
-        const { _deviceId: _d, _updatedAt: _u, ...itemLimpo } = d.data();
-        items.push(itemLimpo);
-      });
-      localStorage.setItem("items", JSON.stringify(items));
+      const { getDocs: _gd, collection: _col, getDoc: _gdc, doc: _doc2, writeBatch: _wb } = window.fb;
+      const colRef2 = _col(db, "estoques", codigo, "items");
+      const colSnap2 = await _gd(colRef2);
+      if (!colSnap2.empty) {
+        items = [];
+        colSnap2.forEach(d => {
+          const { _deviceId: _d, _updatedAt: _u, ...itemLimpo } = d.data();
+          items.push(itemLimpo);
+        });
+        localStorage.setItem("items", JSON.stringify(items));
+      } else {
+        // Subcoleção vazia — verificar doc principal e migrar
+        const docSnap2 = await _gdc(_doc2(db, "estoques", codigo));
+        if (docSnap2.exists()) {
+          const itemsAntigos2 = Array.isArray(docSnap2.data().items) ? docSnap2.data().items : [];
+          if (itemsAntigos2.length > 0) {
+            const batch3 = _wb(db);
+            itemsAntigos2.forEach(item => {
+              batch3.set(_doc2(colRef2, String(item.id)), { ...item, _deviceId, _updatedAt: Date.now() });
+            });
+            await batch3.commit();
+            items = itemsAntigos2;
+            localStorage.setItem("items", JSON.stringify(items));
+          }
+        }
+      }
     } catch(e) { console.error("Erro ao carregar items:", e); }
     cloudSubscribe();
   } catch(e){ console.error(e); document.getElementById("scannerErr").textContent = "Erro: " + e.message; }
@@ -4527,12 +4546,15 @@ window.addEventListener("fb-ready", () => {
     carregarDados(); carregarSaidas(); carregarReservas(); renderHome(); atualizarBtnPedidos();
     // Assina nuvem (inclui subcoleção de items)
     cloudSubscribe();
-    // Carrega items da subcoleção na inicialização para garantir dados atualizados
+    // Carrega items da subcoleção na inicialização e migra dados antigos se necessário
     setTimeout(async () => {
       try {
-        const { db, collection, getDocs, doc } = window.fb;
-        const colSnap = await getDocs(collection(db, "estoques", workspaceId, "items"));
+        const { db, collection, getDocs, getDoc, doc, writeBatch, setDoc } = window.fb;
+        const colRef = collection(db, "estoques", workspaceId, "items");
+        const colSnap = await getDocs(colRef);
+
         if (!colSnap.empty) {
+          // Subcoleção já tem dados — usa eles
           items = [];
           colSnap.forEach(d => {
             const { _deviceId: _dd, _updatedAt: _uu, ...itemLimpo } = d.data();
@@ -4541,8 +4563,30 @@ window.addEventListener("fb-ready", () => {
           localStorage.setItem("items", JSON.stringify(items));
           if (viewAtual === "home") renderHome();
           else if (viewAtual === "tipo") renderHistorico();
+        } else {
+          // Subcoleção vazia — verificar se há items no documento principal (migração)
+          const docSnap = await getDoc(doc(db, "estoques", workspaceId));
+          if (docSnap.exists()) {
+            const docData = docSnap.data();
+            const itemsAntigos = Array.isArray(docData.items) ? docData.items : [];
+            if (itemsAntigos.length > 0) {
+              // Migrar items do documento principal para a subcoleção
+              console.log("Migrando", itemsAntigos.length, "items para subcoleção...");
+              const batch = writeBatch(db);
+              itemsAntigos.forEach(item => {
+                const ref = doc(colRef, String(item.id));
+                batch.set(ref, { ...item, _deviceId, _updatedAt: Date.now() });
+              });
+              await batch.commit();
+              items = itemsAntigos;
+              localStorage.setItem("items", JSON.stringify(items));
+              if (viewAtual === "home") renderHome();
+              else if (viewAtual === "tipo") renderHistorico();
+              console.log("Migração concluída!");
+            }
+          }
         }
-      } catch(e) { console.error("Erro ao carregar items na init:", e); }
+      } catch(e) { console.error("Erro ao carregar/migrar items:", e); }
     }, 1000);
   } else {
     mostrarSetup();
