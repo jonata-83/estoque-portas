@@ -3941,11 +3941,14 @@ function renderPedidos() {
     });
 
     obsRender.forEach(p => {
+      // Não mostrar a linha do rodapé "estoque de portas jl" no card
+      const txt = (p.tipo || "").trim();
+      if (!txt || txt.replace(/_/g,"").trim().toLowerCase() === "estoque de portas jl") return;
       const div = document.createElement("div");
       div.className = "hist-item";
       div.innerHTML = `<div class="hist-body" style="cursor:default">
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-            <span style="font-size:var(--fs-nome);font-weight:700;color:var(--text);flex:1;word-break:break-word">📝 ${p.tipo || ""}</span>
+            <span style="font-size:var(--fs-nome);font-weight:700;color:var(--text);flex:1;word-break:break-word">${txt}</span>
           </div>
         </div>`;
       itemsList.appendChild(div);
