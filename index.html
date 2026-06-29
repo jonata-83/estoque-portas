@@ -801,7 +801,7 @@
 </script>
 
 <script>
-const VERSAO = "v23";
+const VERSAO = "v24";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -3807,6 +3807,7 @@ function excluirPedidoCard() {
     `Excluir pedido de "${cliente}"${dataFmt ? " · " + dataFmt : ""}?`,
     () => {
       const _idsDelPed = pedidos.filter(p => p.cliente === cliente && (p.dataEntrega || "") === dataEntrega).map(p => p.id);
+      _registrarDelete(_idsDelPed);
       pedidos = pedidos.filter(p => !(p.cliente === cliente && (p.dataEntrega || "") === dataEntrega));
       salvarDados();
       renderPedidos();
@@ -4091,12 +4092,14 @@ function _registrarDelete(ids) {
 // Merge seguro: une dados locais com dados do Firebase
 // Dados locais têm prioridade (mais recentes), dados remotos complementam
 function _mergeComRemoto(local, remoto, campo) {
-  if (!Array.isArray(remoto)) return local;
-  if (!Array.isArray(local)) return remoto.filter(i => i && i.id && !_deletedIds.includes(String(i.id)));
-  const localIds = new Set(local.map(i => String(i.id)));
+  if (!Array.isArray(local)) local = [];
+  // Remove dos locais qualquer item que foi marcado como deletado
+  const localLimpo = local.filter(i => i && i.id != null && !_deletedIds.includes(String(i.id)));
+  if (!Array.isArray(remoto)) return localLimpo;
+  const localIds = new Set(localLimpo.map(i => String(i.id)));
   // Adiciona itens do remoto que não existem localmente e não foram deletados
-  const novosDoRemoto = remoto.filter(i => i && i.id && !localIds.has(String(i.id)) && !_deletedIds.includes(String(i.id)));
-  return [...local, ...novosDoRemoto];
+  const novosDoRemoto = remoto.filter(i => i && i.id != null && !localIds.has(String(i.id)) && !_deletedIds.includes(String(i.id)));
+  return [...localLimpo, ...novosDoRemoto];
 }
 
 async function cloudPush() {
