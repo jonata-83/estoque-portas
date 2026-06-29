@@ -297,10 +297,23 @@
   .saida-subtotal .st-nome{font-size:12px;color:var(--text2);letter-spacing:.5px;flex:1;text-align:left;font-style:italic}
   .saida-subtotal .st-val{font-size:18px;font-weight:900;color:var(--accent)}
   .saida-subtotal .st-un{font-size:11px;color:var(--text2)}
+
+@keyframes _girar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.girando { display:inline-block; animation: _girar 0.8s linear infinite; }
+#toastSync {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--bg3, #2a2a2a); color: var(--text, #fff);
+  border: 1px solid var(--border2, #444); border-radius: 12px;
+  padding: 12px 24px; font-size: 15px; font-family: Georgia, serif;
+  z-index: 99999; opacity: 0; pointer-events: none;
+  transition: opacity 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+#toastSync.show { opacity: 1; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+<div id="toastSync"></div>
 
 <!-- ============ TELA DE SETUP INICIAL ============ -->
 <div id="setupOverlay">
@@ -788,7 +801,7 @@
 </script>
 
 <script>
-const VERSAO = "v22";
+const VERSAO = "v23";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -1032,7 +1045,7 @@ function renderHistorico(){
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <div class="hist-title" style="margin:0">Lançamentos${filtroInfo}</div>
       <button onclick="alternarModoOrdem()" style="background:transparent;border:1px solid var(--border2);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Georgia,serif;line-height:1;letter-spacing:.5px">${modoManual ? '✋ Manual' : '↕ Auto'}</button>
-      <button onclick="cloudPull()" title="Atualizar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
+      <button id="btnAtualizar" onclick="cloudPullComFeedback()" title="Atualizar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
     </div>
     <div style="display:flex;align-items:center;gap:6px;padding-right:28px"><span style="font-size:11px;color:var(--text2);letter-spacing:1px">TOTAL</span><span style="font-size:22px;font-weight:900;color:var(--accent)">${totalQtd}</span><span style="font-size:12px;color:var(--text2)">un</span></div>
   </div>
@@ -4139,7 +4152,37 @@ async function cloudPush() {
 
 // Assina mudanças vindas da nuvem
 // Lê dados do Firebase e atualiza a tela (chamado ao abrir app e ao apertar 🔄)
-async function cloudPull() {
+// Mostra um toast temporário
+function _mostrarToast(msg, ms) {
+  const t = document.getElementById("toastSync");
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), ms || 2000);
+}
+
+// cloudPull com feedback visual (spinner no botão + toast)
+async function cloudPullComFeedback() {
+  const btn = document.getElementById("btnAtualizar");
+  if (btn) { btn.innerHTML = '<span class="girando">🔄</span>'; btn.disabled = true; }
+  _mostrarToast("Atualizando…", 5000);
+  const totalAntes = items.reduce((s,i)=>s+Number(i.qtd||0),0);
+  try {
+    await cloudPull(true); // true = remoto vence (pega versão mais recente)
+    const totalDepois = items.reduce((s,i)=>s+Number(i.qtd||0),0);
+    const diff = totalDepois - totalAntes;
+    if (diff > 0)      _mostrarToast("✅ +" + diff + " un atualizadas");
+    else if (diff < 0) _mostrarToast("✅ Atualizado (" + diff + " un)");
+    else               _mostrarToast("✅ Já está atualizado");
+  } catch(e) {
+    _mostrarToast("⚠️ Erro ao atualizar");
+  } finally {
+    if (btn) { btn.innerHTML = '🔄'; btn.disabled = false; }
+  }
+}
+
+async function cloudPull(remotoVence) {
   if (!workspaceId || !window.fb) return;
   setSyncStatus("syncing");
   try {
@@ -4152,18 +4195,19 @@ async function cloudPull() {
       data.deletedIds.forEach(id => { if (!_deletedIds.includes(String(id))) _deletedIds.push(String(id)); });
       localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
     }
-    // Aplicar dados remotos com merge onde necessário
+    // Aplicar dados remotos. Se remotoVence=true (atualização manual), o valor do
+    // Firebase substitui o local para items que já existem (pega edições de outros)
     if (Array.isArray(data.items)) {
-      items = _mergeComRemoto(items, data.items, "items");
+      items = remotoVence ? _mergeRemotoVence(items, data.items) : _mergeComRemoto(items, data.items, "items");
       localStorage.setItem("items", JSON.stringify(items));
     }
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
     if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
     if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-    if (Array.isArray(data.pedidos))     { pedidos = _mergeComRemoto(pedidos, data.pedidos, "pedidos"); }
-    if (Array.isArray(data.saidas))      { saidas  = _mergeComRemoto(saidas,  data.saidas,  "saidas");  }
-    if (Array.isArray(data.saidasHistorico)) { saidasHistorico = _mergeComRemoto(saidasHistorico, data.saidasHistorico, "saidasHistorico"); }
-    if (Array.isArray(data.reservas))    { reservas = _mergeComRemoto(reservas, data.reservas, "reservas"); }
+    if (Array.isArray(data.pedidos))     { pedidos = remotoVence ? _mergeRemotoVence(pedidos, data.pedidos) : _mergeComRemoto(pedidos, data.pedidos, "pedidos"); }
+    if (Array.isArray(data.saidas))      { saidas  = remotoVence ? _mergeRemotoVence(saidas, data.saidas)   : _mergeComRemoto(saidas,  data.saidas,  "saidas");  }
+    if (Array.isArray(data.saidasHistorico)) { saidasHistorico = remotoVence ? _mergeRemotoVence(saidasHistorico, data.saidasHistorico) : _mergeComRemoto(saidasHistorico, data.saidasHistorico, "saidasHistorico"); }
+    if (Array.isArray(data.reservas))    { reservas = remotoVence ? _mergeRemotoVence(reservas, data.reservas) : _mergeComRemoto(reservas, data.reservas, "reservas"); }
     localStorage.setItem("marceneiros",     JSON.stringify(marceneiros));
     localStorage.setItem("lembretes",       JSON.stringify(lembretes));
     localStorage.setItem("saidas",          JSON.stringify(saidas));
@@ -4177,7 +4221,19 @@ async function cloudPull() {
   } catch(e) {
     console.error("Erro cloudPull:", e);
     setSyncStatus("error");
+    throw e;
   }
+}
+
+// Merge onde o REMOTO vence para items existentes (usado na atualização manual)
+// Une: items locais + items remotos, remoto sobrescreve local quando mesmo ID
+function _mergeRemotoVence(local, remoto) {
+  if (!Array.isArray(remoto)) return local;
+  if (!Array.isArray(local)) local = [];
+  const porId = {};
+  local.forEach(i => { if (i && i.id != null && !_deletedIds.includes(String(i.id))) porId[String(i.id)] = i; });
+  remoto.forEach(i => { if (i && i.id != null && !_deletedIds.includes(String(i.id))) porId[String(i.id)] = i; });
+  return Object.values(porId);
 }
 
 // cloudSubscribe agora é apenas um alias para cloudPull (sem onSnapshot)
