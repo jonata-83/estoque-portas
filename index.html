@@ -801,7 +801,7 @@
 </script>
 
 <script>
-const VERSAO = "v24";
+const VERSAO = "v25";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -2590,9 +2590,10 @@ function _blocoMonoEstoque(lista) {
 function _montarTextoEstoque(m, itens, filtros) {
   filtros = filtros || {};
   const hoje = new Date().toLocaleDateString("pt-BR");
-  const portas = _ordenarItensEstoque(itens.filter(i => i.categoria === "porta"));
-  const janelas = _ordenarItensEstoque(itens.filter(i => i.categoria === "janela"));
-  const outros = _ordenarItensEstoque(itens.filter(i => i.categoria === "outro"));
+  const _temQtd = i => Number(i.qtd) > 0; // só itens com quantidade > 0
+  const portas = _ordenarItensEstoque(itens.filter(i => i.categoria === "porta" && _temQtd(i)));
+  const janelas = _ordenarItensEstoque(itens.filter(i => i.categoria === "janela" && _temQtd(i)));
+  const outros = _ordenarItensEstoque(itens.filter(i => i.categoria === "outro" && _temQtd(i)));
   const totalP = portas.reduce((s,i) => s + Number(i.qtd), 0);
   const totalJ = janelas.reduce((s,i) => s + Number(i.qtd), 0);
   const totalO = outros.reduce((s,i) => s + Number(i.qtd), 0);
