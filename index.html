@@ -801,7 +801,7 @@
 </script>
 
 <script>
-const VERSAO = "v25";
+const VERSAO = "v26";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -4001,6 +4001,9 @@ function adicionarPedido() {
     return;
   }
   if (editandoPedidoGroup) {
+    // Registra os IDs antigos como deletados para o merge não trazê-los de volta
+    const _idsAntigos = pedidos.filter(p => p.cliente === editandoPedidoGroup.cliente && (p.dataEntrega || "") === editandoPedidoGroup.dataEntrega).map(p => p.id);
+    _registrarDelete(_idsAntigos);
     pedidos = pedidos.filter(p => !(p.cliente === editandoPedidoGroup.cliente && (p.dataEntrega || "") === editandoPedidoGroup.dataEntrega));
   }
   const agora = Date.now();
@@ -4083,6 +4086,20 @@ let _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
 let _pushTimer = null;
 let _isSaving = false;
 
+// Remove pedidos duplicados exatos (mesmo cliente+tipo+qtd+largura+dataEntrega+obs)
+// Mantém apenas a primeira ocorrência — limpa duplicações causadas por merges antigos
+function _dedupPedidos(arr) {
+  if (!Array.isArray(arr)) return arr;
+  const vistos = new Set();
+  const resultado = [];
+  arr.forEach(p => {
+    if (!p) return;
+    const chave = [p.cliente||"", p.tipo||"", p.qtd||0, p.largura||"", p.dataEntrega||"", p.obs?1:0].join("|");
+    if (!vistos.has(chave)) { vistos.add(chave); resultado.push(p); }
+  });
+  return resultado;
+}
+
 function _registrarDelete(ids) {
   if (!Array.isArray(ids)) ids = [ids];
   ids.forEach(id => { if (!_deletedIds.includes(String(id))) _deletedIds.push(String(id)); });
@@ -4123,7 +4140,7 @@ async function cloudPush() {
         items:           _mergeComRemoto(items,           remoto.items,           "items"),
         marceneiros,
         lembretes,
-        pedidos:         _mergeComRemoto(pedidos,         remoto.pedidos,         "pedidos"),
+        pedidos:         _dedupPedidos(_mergeComRemoto(pedidos,         remoto.pedidos,         "pedidos")),
         saidas:          _mergeComRemoto(saidas,          remoto.saidas,          "saidas"),
         saidasHistorico: _mergeComRemoto(saidasHistorico, remoto.saidasHistorico, "saidasHistorico"),
         saidaPrecos,
@@ -4208,7 +4225,7 @@ async function cloudPull(remotoVence) {
     if (Array.isArray(data.marceneiros)) marceneiros = data.marceneiros;
     if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
     if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-    if (Array.isArray(data.pedidos))     { pedidos = remotoVence ? _mergeRemotoVence(pedidos, data.pedidos) : _mergeComRemoto(pedidos, data.pedidos, "pedidos"); }
+    if (Array.isArray(data.pedidos))     { pedidos = remotoVence ? _mergeRemotoVence(pedidos, data.pedidos) : _mergeComRemoto(pedidos, data.pedidos, "pedidos"); pedidos = _dedupPedidos(pedidos); }
     if (Array.isArray(data.saidas))      { saidas  = remotoVence ? _mergeRemotoVence(saidas, data.saidas)   : _mergeComRemoto(saidas,  data.saidas,  "saidas");  }
     if (Array.isArray(data.saidasHistorico)) { saidasHistorico = remotoVence ? _mergeRemotoVence(saidasHistorico, data.saidasHistorico) : _mergeComRemoto(saidasHistorico, data.saidasHistorico, "saidasHistorico"); }
     if (Array.isArray(data.reservas))    { reservas = remotoVence ? _mergeRemotoVence(reservas, data.reservas) : _mergeComRemoto(reservas, data.reservas, "reservas"); }
