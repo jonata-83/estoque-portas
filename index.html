@@ -801,7 +801,7 @@
 </script>
 
 <script>
-const VERSAO = "v26";
+const VERSAO = "v27";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -1408,7 +1408,10 @@ function validarForm(){
   }
   document.getElementById("btnSalvar").disabled = !ok;
 }
+// CORREÇÃO v27: trava anti toque-duplo — impede lançamento duplicado
+let _salvandoLanc = false;
 function salvar(){
+  if (_salvandoLanc) return;
   const tipo = document.getElementById("fTipo").value;
   const linhas = [];
   for (let i = 1; i <= 6; i++){
@@ -1421,6 +1424,7 @@ function salvar(){
     }
   }
   if (!linhas.length) return;
+  _salvandoLanc = true;
   const agora = Date.now();
   const dataStr = new Date().toLocaleDateString("pt-BR");
   linhas.forEach((ln, idx) => {
@@ -1436,10 +1440,11 @@ function salvar(){
   });
   salvarDados();
   const btn=document.getElementById("btnSalvar");
+  btn.disabled = true;
   btn.textContent = linhas.length > 1 ? `✓ ${linhas.length} lançamentos salvos!` : "✓ Salvo!";
   btn.classList.add("done");
   btn.style.background = "linear-gradient(135deg,#5a9e6e,#3a7a50)";
-  setTimeout(()=>{btn.textContent="Salvar Lançamento";btn.classList.remove("done");btn.style.background="linear-gradient(135deg,#3a7bd5,#2a5aa8)";renderHistorico();renderHome();irView("tipo")},1200);
+  setTimeout(()=>{_salvandoLanc=false;btn.disabled=false;btn.textContent="Salvar Lançamento";btn.classList.remove("done");btn.style.background="linear-gradient(135deg,#3a7bd5,#2a5aa8)";renderHistorico();renderHome();irView("tipo")},1200);
 }
 
 
@@ -4121,9 +4126,11 @@ function _mergeComRemoto(local, remoto, campo) {
 }
 
 async function cloudPush() {
-  if (!workspaceId || !cloudReady || _isSaving) return;
+  if (!workspaceId || !cloudReady || _isSaving) { cloudPushPending = true; return; }
+  cloudPushPending = true;
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(async () => {
+    cloudPushPending = false;
     _isSaving = true;
     setSyncStatus("syncing");
     try {
@@ -4167,6 +4174,7 @@ async function cloudPush() {
       setSyncStatus("error");
     } finally {
       _isSaving = false;
+      if (cloudPushPending) cloudPush(); // CORREÇÃO v27: não perde push que chegou durante o salvamento
     }
   }, 800);
 }
