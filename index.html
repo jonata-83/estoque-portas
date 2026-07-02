@@ -801,7 +801,7 @@
 </script>
 
 <script>
-const VERSAO = "v27";
+const VERSAO = "v28";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={},pedidos=[];
@@ -1301,7 +1301,9 @@ function confirmarDelete(){
     if(window._deletandoMarc && deleteMarcId){
       window._deletandoMarc = false;
       marceneiros = marceneiros.filter(m => m.id !== deleteMarcId);
+      _registrarDelete(items.filter(i => i.marceneiroId === deleteMarcId).map(i => i.id));
       items = items.filter(i => i.marceneiroId !== deleteMarcId);
+      _registrarDelete(saidas.filter(s => s.marceneiroId === deleteMarcId).map(s => s.id));
       saidas = saidas.filter(s => s.marceneiroId !== deleteMarcId);
       salvarDados(); salvarSaidas(); fecharDeleteMenu(); renderHome();
       deleteMarcId = null; return;
@@ -2098,6 +2100,7 @@ function confirmarDevolver(){
     if (q <= restante){ restante -= q; idsRemover.push(saidas[i].id); }
     else { saidas[i].qtd = q - restante; restante = 0; }
   }
+  _registrarDelete(idsRemover);
   saidas = saidas.filter(s => !idsRemover.includes(s.id));
 
   // Adicionar de volta ao estoque
@@ -2139,6 +2142,7 @@ function limparSaidas() {
       itens: mSaidas.map(s => ({ nome: s.nome, largura: s.largura, qtd: s.qtd }))
     });
     salvarSaidasHistorico();
+    _registrarDelete(mSaidas.map(s => s.id));
     saidas = saidas.filter(s => s.marceneiroId !== m.id);
     salvarSaidas(); renderSaidas();
     document.getElementById("inputMotorista").value = "";
@@ -2429,6 +2433,7 @@ function novoCarrIniciar() {
   if (!_pendingMove) { fecharNovoCarr(); return; }
   const { sinal, val, idx } = _pendingMove;
   const marcId = items[idx].marceneiroId;
+  _registrarDelete(saidas.filter(s => s.marceneiroId === marcId).map(s => s.id));
   saidas = saidas.filter(s => s.marceneiroId !== marcId);
   const inpMot = document.getElementById("inputMotorista");
   if (inpMot) inpMot.value = "";
@@ -4493,6 +4498,7 @@ function _abrirMenuReservaTudo(m, cliente, itens) {
       setTimeout(() => panel.style.transform = "translateY(0)", 10);
       _novoCarrCallbacks = {
         iniciar: () => {
+          _registrarDelete(saidasAntigas.map(s => s.id));
           saidas = saidas.filter(s => s.marceneiroId !== m.id);
           const inpMot = document.getElementById("inputMotorista");
           if (inpMot) inpMot.value = "";
