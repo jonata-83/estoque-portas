@@ -1,4 +1,4 @@
-  
+
 
 
 
@@ -1037,7 +1037,7 @@ function buildHistItem(item,list){
     : "";
   const el=document.createElement("div");el.className="hist-item";el.dataset.id=item.id;
   const emoji = _emojiCategoria(item.categoria);
-  el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:nowrap"><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu(${item.id})" style="cursor:pointer;flex-shrink:0">${medidas}</span><span class="hist-nome" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</span>${tagReserva}</div></div><div class="hist-handle" style="opacity:0;width:8px;padding:0;border:none"></div>`;
+  el.innerHTML=`<span class="hist-emoji">${emoji}</span><div class="hist-body"><div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:nowrap"><span class="hist-medidas" onclick="event.stopPropagation();abrirMoveMenu('${item.id}')" style="cursor:pointer;flex-shrink:0">${medidas}</span><span class="hist-nome" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</span>${tagReserva}</div></div><div class="hist-handle" style="opacity:0;width:8px;padding:0;border:none"></div>`;
   // Filtro ao clicar no emoji
   el.querySelector(".hist-emoji").addEventListener("click", e => {
     e.stopPropagation();
@@ -1296,7 +1296,7 @@ function startDrag(e,id,el){
     window.removeEventListener("mousemove",mmH);window.removeEventListener("mouseup",muH);
     window.removeEventListener("touchmove",tmH);window.removeEventListener("touchend",teH);
     const t=getTarget(ey);
-    if(t&&t.dataset.id&&t.dataset.id!==String(dragSrcId))reorderItems(dragSrcId,parseInt(t.dataset.id));
+    if(t&&t.dataset.id&&t.dataset.id!==String(dragSrcId))reorderItems(dragSrcId, t.dataset.id);
     dragSrcId=null;
   };
   const mmH=ev=>onMove(ev.clientX,ev.clientY);
