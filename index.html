@@ -752,7 +752,7 @@
 </script>
 
 <script>
-const VERSAO = "v28";
+const VERSAO = "v29";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -1645,7 +1645,7 @@ function renderReserva() {
         const btnItem = row.querySelector(".reserva-retornar-item-btn");
         btnItem.addEventListener("click", e => {
           e.stopPropagation();
-          retornarReservaEstoque(it.nome, it.largura, it.itemId);
+          retornarReservaEstoque(it.nome, it.largura, it.itemId, it.ids);
         });
         corpo.appendChild(row);
       });
@@ -1691,41 +1691,42 @@ function renderReserva() {
 
 function removerReserva(nome, largura) {
   const m = getMarceneiro(); if (!m) return;
+  _registrarDelete(reservas.filter(r => r.marceneiroId === m.id && r.nome === nome && String(r.largura) === String(largura)).map(r => r.id));
   reservas = reservas.filter(r => !(r.marceneiroId === m.id && r.nome === nome && String(r.largura) === String(largura)));
   salvarReservas();
   renderReserva();
 }
 
-function retornarReservaEstoque(nome, largura, itemId) {
+function retornarReservaEstoque(nome, largura, itemId, ids) {
   const m = getMarceneiro(); if (!m) return;
+  // CORREÇÃO v29: retorna só as reservas da linha clicada (daquele cliente),
+  // e não as de todos os clientes que reservaram a mesma porta.
+  const idsLinha = Array.isArray(ids) && ids.length ? new Set(ids) : null;
   const grupo = reservas.filter(r => r.marceneiroId === m.id && (
-    (itemId && r.itemId === itemId) ||
-    (r.nome === nome && String(r.largura) === String(largura))
+    idsLinha ? idsLinha.has(r.id) : (
+      (itemId && r.itemId === itemId) ||
+      (r.nome === nome && String(r.largura) === String(largura))
+    )
   ));
   if (!grupo.length) return;
   const qtdTotal = grupo.reduce((s,r) => s + Number(r.qtd), 0);
   _pedirConfirmacao(`Retornar ${qtdTotal} un de "${nome} ${largura}cm" ao estoque?`, () => {
-    const item = items.find(i =>
-      (itemId && _sameId(i.id, itemId)) ||
-      (i.marceneiroId === m.id && _nomeItemCategoria(i).toLowerCase() === nome.toLowerCase() && String(i.largura) === String(largura))
-    );
-    if (item) {
-      item.qtd = Number(item.qtd) + qtdTotal;
-      salvarDados();
-      renderHistorico();
-      renderHome();
-    }
-    // Remove reservas correspondentes
+    // CORREÇÃO v29: a reserva NÃO desconta do estoque (só aparece como "-N" na tela),
+    // então ao retornar basta remover a reserva — não pode somar na quantidade.
     const idsRemover = new Set(grupo.map(r => r.id));
+    _registrarDelete([...idsRemover]);
     reservas = reservas.filter(r => !idsRemover.has(r.id));
     salvarReservas();
     renderReserva();
+    renderHistorico();
+    renderHome();
   }, "Retornar", "linear-gradient(135deg,#2a9a50,#1a7038)");
 }
 
 function limparReservas() {
   const m = getMarceneiro(); if (!m) return;
   _pedirConfirmacao(`Limpar todas as reservas de ${m.nome}?`, () => {
+    _registrarDelete(reservas.filter(r => r.marceneiroId === m.id).map(r => r.id));
     reservas = reservas.filter(r => r.marceneiroId !== m.id);
     salvarReservas();
     renderReserva();
@@ -3788,12 +3789,12 @@ function _abrirMenuReservaTudo(m, cliente, itens) {
     _fecharMenuReservaTudo();
     _pedirConfirmacao(`Retornar tudo de ${nomeLabel} ao estoque?`, () => {
       itens.forEach(it => {
+        // CORREÇÃO v29: só remove a reserva, sem somar no estoque
         const allIds = new Set(it.ids);
-        const item = items.find(i => (it.itemId && _sameId(i.id, it.itemId)) || (i.marceneiroId === m.id && _nomeItemCategoria(i).toLowerCase() === it.nome.toLowerCase() && String(i.largura) === String(it.largura)));
-        if (item) item.qtd = Number(item.qtd) + it.qtd;
+        _registrarDelete([...allIds]);
         reservas = reservas.filter(r => !allIds.has(r.id));
       });
-      salvarDados(); salvarReservas(); renderHistorico(); renderHome(); renderReserva();
+      salvarReservas(); renderHistorico(); renderHome(); renderReserva();
     }, "Retornar", "linear-gradient(135deg,#2a9a50,#1a7038)");
   };
 
@@ -3806,6 +3807,7 @@ function _abrirMenuReservaTudo(m, cliente, itens) {
         registrarSaida(m.id, it.nome, it.largura, it.qtd, it.categoria || "porta", it.itemId);
         const item = items.find(i => (it.itemId && _sameId(i.id, it.itemId)) || (i.marceneiroId === m.id && _nomeItemCategoria(i).toLowerCase() === it.nome.toLowerCase() && String(i.largura) === String(it.largura)));
         if (item) { item.qtd = Math.max(0, Number(item.qtd) - it.qtd); _touchTs(item); }
+        _registrarDelete([...allIds]);
         reservas = reservas.filter(r => !allIds.has(r.id));
       });
       salvarDados(); salvarSaidas(); salvarReservas(); renderHistorico(); renderHome(); renderReserva(); atualizarBtnSaidas();
