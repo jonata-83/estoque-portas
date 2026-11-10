@@ -1,0 +1,12 @@
+{
+  "appId": "br.com.jl.estoqueportas",
+  "appName": "Estoque de Portas",
+  "webDir": "www",
+  "server": {
+    "url": "https://jonata-83.github.io/estoque-portas/",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

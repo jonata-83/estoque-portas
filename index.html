@@ -752,7 +752,7 @@
 </script>
 
 <script>
-const VERSAO = "v30";
+const VERSAO = "v31";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -2718,6 +2718,15 @@ function _montarTextoSaidas(m, mSaidas, opts) {
 // comportamento imprevisível (ex: enviar a imagem no lugar do texto).
 let _shareEmAndamento = false;
 
+// v31: dentro do APK próprio (Capacitor) o WebView não tem navigator.share,
+// então usa os plugins nativos de compartilhar. No navegador isso fica inerte.
+function _capNativo() {
+  const C = window.Capacitor;
+  if (!C || typeof C.isNativePlatform !== 'function' || !C.isNativePlatform()) return null;
+  const P = C.Plugins || {};
+  return P.Share ? P : null;
+}
+
 function _compartilharPNG(canvas, fileName, btnEl, shareTitle, mimeType, quality) {
   if (_shareEmAndamento) return;
   _shareEmAndamento = true;
@@ -2729,6 +2738,20 @@ function _compartilharPNG(canvas, fileName, btnEl, shareTitle, mimeType, quality
     _shareEmAndamento = false;
     if (btnEl) { btnEl.textContent = txtOriginal; btnEl.disabled = false; }
   };
+  const P = _capNativo();
+  if (P && P.Filesystem) {
+    (async () => {
+      try {
+        const base64 = canvas.toDataURL(mime, qual).split(',')[1];
+        await P.Filesystem.writeFile({ path: fileName, data: base64, directory: 'CACHE' });
+        const r = await P.Filesystem.getUri({ path: fileName, directory: 'CACHE' });
+        await P.Share.share({ files: [r.uri], title: shareTitle || 'Imagem' });
+      } catch (e) {
+        if (!/cancel/i.test(String((e && e.message) || e))) { console.warn("share nativo:", e); _mostrarToast("⚠️ Erro ao compartilhar", 3000); }
+      } finally { finalizar(); }
+    })();
+    return;
+  }
   canvas.toBlob(blob => {
     if (!blob) { finalizar(); return; }
     const file = new File([blob], fileName, { type: mime });
@@ -2751,6 +2774,11 @@ async function _enviarTexto(texto) {
   if (_shareEmAndamento) return;
   _shareEmAndamento = true;
   try {
+    const P = _capNativo();
+    if (P) {
+      try { await P.Share.share({ text: texto }); return; }
+      catch (e) { if (/cancel/i.test(String((e && e.message) || e))) return; }
+    }
     // Tenta o compartilhamento nativo (mobile abre lista com WhatsApp)
     if (navigator.share) {
       try {
