@@ -728,7 +728,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp
+    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, runTransaction
   } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -747,12 +747,12 @@
   // enableIndexedDbPersistence desabilitado pois causa snapshots com dados stale
 
   // Expor para o código principal
-  window.fb = { db, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp };
+  window.fb = { db, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, runTransaction };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
 <script>
-const VERSAO = "v29";
+const VERSAO = "v30";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -949,6 +949,7 @@ function addMarceneiro(){
 }
 function removeMarceneiro(id){
   if(!confirm("Remover este marceneiro e todos os lançamentos?"))return;
+  _registrarDelete([id]);_registrarDelete(items.filter(i=>i.marceneiroId===id).map(i=>i.id));
   marceneiros=marceneiros.filter(m=>m.id!==id);items=items.filter(i=>i.marceneiroId!==id);
   salvarDados();renderHome();
 }
@@ -1260,6 +1261,10 @@ function confirmarDelete(){
   pedirSenha(() => {
     if(window._deletandoMarc && deleteMarcId){
       window._deletandoMarc = false;
+      _registrarDelete([deleteMarcId]);
+      _registrarDelete(reservas.filter(r => r.marceneiroId === deleteMarcId).map(r => r.id));
+      reservas = reservas.filter(r => r.marceneiroId !== deleteMarcId);
+      localStorage.setItem("reservas", JSON.stringify(reservas));
       marceneiros = marceneiros.filter(m => !_sameId(m.id, deleteMarcId));
       _registrarDelete(items.filter(i => i.marceneiroId === deleteMarcId).map(i => i.id));
       items = items.filter(i => i.marceneiroId !== deleteMarcId);
@@ -1338,6 +1343,7 @@ function salvarEdicao(){
   items[idx].tipo=document.getElementById("eTipo").value;
   items[idx].qtd=Number(document.getElementById("eQtd").value);
   items[idx].largura=document.getElementById("eLarg").value;
+  _touchTs(items[idx]);
   const _id=editingId;
   salvarDados();fecharModal();renderHistorico();renderHome();
   setTimeout(()=>flashCard(_id),80);
@@ -1428,7 +1434,7 @@ function carregarSaidas() {
 }
 function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush();atualizarBtnSaidas(); }
 function salvarSaidasHistorico() { localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico)); cloudPush(); }
-function salvarSaidaPrecos() { localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos)); cloudPush(); }
+function salvarSaidaPrecos() { localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos)); _marcarSujo("precos"); cloudPush(); }
 function _chavePrecoSaida(marceneiroId, nome, largura) {
   return String(marceneiroId) + "||" + (nome || "").toLowerCase().trim() + "||" + String(largura);
 }
@@ -2058,7 +2064,7 @@ function confirmarDevolver(){
     if (restante <= 0) break;
     const q = Number(saidas[i].qtd);
     if (q <= restante){ restante -= q; idsRemover.push(saidas[i].id); }
-    else { saidas[i].qtd = q - restante; restante = 0; }
+    else { saidas[i].qtd = q - restante; _touchTs(saidas[i]); restante = 0; }
   }
   _registrarDelete(idsRemover);
   saidas = saidas.filter(s => !idsRemover.includes(s.id));
@@ -2066,7 +2072,7 @@ function confirmarDevolver(){
   // Adicionar de volta ao estoque
   const item = items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela") || (i.categoria === "outro" && nome === "Outro")) && String(i.largura) === String(largura));
   if (item){
-    item.qtd = Number(item.qtd) + val;
+    item.qtd = Number(item.qtd) + val; _touchTs(item);
   } else {
     // Fallback: cria novo item no estoque (caso o original tenha sido deletado)
     const cat = devolverAtual.categoria || (nome === "Janela" ? "janela" : (nome === "Outro" ? "outro" : "porta"));
@@ -2252,7 +2258,7 @@ function editarNomeClienteReserva(clienteAtual, itens, headerEl) {
 
   const salvar = () => {
     const novo = input.value.trim();
-    reservas.forEach(r => { if (idsAfetados.has(r.id)) r.cliente = novo; });
+    reservas.forEach(r => { if (idsAfetados.has(r.id)) { r.cliente = novo; _touchTs(r); } });
     salvarReservas();
     renderReserva();
   };
@@ -3044,6 +3050,7 @@ function reenviarSaidasHistTexto(id) {
 }
 function excluirSaidasHist(id) {
   pedirSenha(() => {
+    _registrarDelete([id]);
     saidasHistorico = saidasHistorico.filter(x => !_sameId(x.id, id));
     salvarSaidasHistorico();
     renderSaidasHistList();
@@ -3185,11 +3192,13 @@ function _executarSalvarEdicao(idx) {
   if (novo) {
     if (lembretes[lembreteIdAtual] && lembretes[lembreteIdAtual][idx]) {
       lembretes[lembreteIdAtual][idx].txt = novo; _touchTs(lembretes[lembreteIdAtual][idx]);
+      if (lembretes[lembreteIdAtual][idx].id == null) _marcarSujo("lembretes");
       salvarDados(); renderHome();
     }
   } else {
     // texto apagado: remove o lembrete
     if (lembretes[lembreteIdAtual]) {
+      { const _l = lembretes[lembreteIdAtual][idx]; if (_l && _l.id != null) _registrarDelete([_l.id]); else _marcarSujo("lembretes"); }
       lembretes[lembreteIdAtual].splice(idx, 1);
       // Mantém a chave como array vazio (NÃO usar "delete") — assim o merge
       // do Firestore substitui o array corretamente, em vez de preservar
@@ -3417,6 +3426,7 @@ function deletarLembrete(idx) {
   _pedirConfirmacao(
     "Excluir este lembrete?",
     () => {
+      { const _l = lembretes[lembreteIdAtual][idx]; if (_l && _l.id != null) _registrarDelete([_l.id]); else _marcarSujo("lembretes"); }
       lembretes[lembreteIdAtual].splice(idx, 1);
       salvarDados(); renderLembreteList(); renderHome();
     },
@@ -3461,67 +3471,165 @@ function gerarCodigoWorkspace(){
 
 let _deletedIds = JSON.parse(localStorage.getItem("deletedIds") || "[]");
 let _pushTimer = null;
+let _retryTimer = null;
 let _isSaving = false;
+const MAX_DELETED = 3000;
 
-function _registrarDelete(ids) {
-  if (!Array.isArray(ids)) ids = [ids];
-  ids.forEach(id => { if (!_deletedIds.includes(String(id))) _deletedIds.push(String(id)); });
-  if (_deletedIds.length > 500) _deletedIds = _deletedIds.slice(-500);
+// Marca o que ainda não subiu para a nuvem (sobrevive a fechar o app).
+// geral = há alteração local pendente; lembretes/precos = objetos sem merge por item.
+let _sujo = (() => { try { return JSON.parse(localStorage.getItem("syncSujo")) || {}; } catch { return {}; } })();
+let _sujoSeq = 0;
+function _marcarSujo(k) {
+  _sujoSeq++;
+  if (_sujo[k]) return;
+  _sujo[k] = true;
+  localStorage.setItem("syncSujo", JSON.stringify(_sujo));
+}
+function _limparSujo() { _sujo = {}; localStorage.setItem("syncSujo", "{}"); }
+
+function _salvarDeletados() {
+  if (_deletedIds.length > MAX_DELETED) _deletedIds = _deletedIds.slice(-MAX_DELETED);
   localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
 }
-
-// Merge inteligente: para cada ID, mantém a versão com _ts mais recente
-function _mergePorTs(local, remoto) {
-  if (!Array.isArray(local)) local = [];
-  if (!Array.isArray(remoto)) remoto = [];
-  const map = new Map();
-  local.forEach(i => { if (i && i.id != null && !_deletedIds.includes(String(i.id))) map.set(String(i.id), i); });
-  remoto.forEach(i => {
-    if (!i || i.id == null || _deletedIds.includes(String(i.id))) return;
-    const id = String(i.id);
-    const localItem = map.get(id);
-    const remotoTs = i._ts || 0;
-    const localTs = localItem?._ts || 0;
-    if (remotoTs >= localTs) map.set(id, i);
-  });
-  return Array.from(map.values());
+function _registrarDelete(ids) {
+  if (!Array.isArray(ids)) ids = [ids];
+  const set = new Set(_deletedIds);
+  ids.forEach(id => { if (id != null && !set.has(String(id))) { set.add(String(id)); _deletedIds.push(String(id)); } });
+  _salvarDeletados();
+}
+// Junta a lista de excluídos que veio da nuvem com a local
+function _absorverDeletados(lista) {
+  if (!Array.isArray(lista)) return;
+  const set = new Set(_deletedIds);
+  let mudou = false;
+  lista.forEach(id => { id = String(id); if (!set.has(id)) { set.add(id); _deletedIds.push(id); mudou = true; } });
+  if (mudou) _salvarDeletados();
 }
 
-// Salva na nuvem (com debounce). Usa updateDoc para não sobrescrever dados de outros.
-async function cloudPush() {
-  if (!workspaceId || !window.fb || _isSaving || _isApplyingRemote) {
-    cloudPushPending = true;
-    return;
-  }
+// Merge inteligente: para cada ID, mantém a versão com _ts mais recente.
+// baseRemota=true usa a ordem da nuvem (ao receber); false usa a ordem local (ao enviar).
+function _mergePorTs(local, remoto, baseRemota) {
+  if (!Array.isArray(local)) local = [];
+  if (!Array.isArray(remoto)) remoto = [];
+  const del = new Set(_deletedIds);
+  const ok = i => i && i.id != null && !del.has(String(i.id));
+  const mapL = new Map(), mapR = new Map();
+  local.forEach(i => { if (ok(i)) mapL.set(String(i.id), i); });
+  remoto.forEach(i => { if (ok(i)) mapR.set(String(i.id), i); });
+  // empate de _ts → vale a versão da nuvem
+  const escolher = id => {
+    const l = mapL.get(id), r = mapR.get(id);
+    if (!l) return r;
+    if (!r) return l;
+    return (r._ts || 0) >= (l._ts || 0) ? r : l;
+  };
+  const out = [];
+  const visto = new Set();
+  const [prim, seg] = baseRemota ? [mapR, mapL] : [mapL, mapR];
+  prim.forEach((_, id) => { visto.add(id); out.push(escolher(id)); });
+  seg.forEach((_, id) => { if (!visto.has(id)) out.push(escolher(id)); });
+  return out;
+}
+
+// O aparelho tem algo que a nuvem não tem (item novo, mais recente, ou exclusão pendente)?
+function _temNovidadeLocal(local, remoto) {
+  const del = new Set(_deletedIds);
+  const mapR = new Map();
+  (Array.isArray(remoto) ? remoto : []).forEach(i => { if (i && i.id != null) mapR.set(String(i.id), i._ts || 0); });
+  for (const id of mapR.keys()) if (del.has(id)) return true;
+  return (Array.isArray(local) ? local : []).some(i => {
+    if (!i || i.id == null) return false;
+    const id = String(i.id);
+    if (del.has(id)) return false;
+    return !mapR.has(id) || (i._ts || 0) > mapR.get(id);
+  });
+}
+
+// Lembretes: { marceneiroId: [ {id, txt, _ts} ] } — merge por lembrete
+function _mergeLembretes(local, remoto, baseRemota) {
+  const L = (local && typeof local === "object") ? local : {};
+  const R = (remoto && typeof remoto === "object") ? remoto : {};
+  const out = {};
+  new Set([...Object.keys(L), ...Object.keys(R)]).forEach(k => {
+    const l = Array.isArray(L[k]) ? L[k] : [], r = Array.isArray(R[k]) ? R[k] : [];
+    const comId = _mergePorTs(l.filter(x => x && x.id != null), r.filter(x => x && x.id != null), baseRemota);
+    // lembretes antigos sem id: vale o lado que foi alterado por último
+    const semId = ((_sujo.lembretes || !(k in R)) ? l : r).filter(x => x && x.id == null);
+    out[k] = [...semId, ...comId];
+  });
+  return out;
+}
+function _lembretesTemNovidade(remoto) {
+  const R = (remoto && typeof remoto === "object") ? remoto : {};
+  return Object.keys(lembretes || {}).some(k => _temNovidadeLocal(lembretes[k], R[k]));
+}
+
+function _precisaPush(data) {
+  if (_sujo.geral || _sujo.lembretes || _sujo.precos) return true;
+  return _temNovidadeLocal(items, data.items)
+      || _temNovidadeLocal(marceneiros, data.marceneiros)
+      || _temNovidadeLocal(saidas, data.saidas)
+      || _temNovidadeLocal(saidasHistorico, data.saidasHistorico)
+      || _temNovidadeLocal(reservas, data.reservas)
+      || _lembretesTemNovidade(data.lembretes);
+}
+
+// Agenda o envio para a nuvem (com debounce)
+function cloudPush() {
+  _marcarSujo("geral");
+  if (!workspaceId || !window.fb) return;
   cloudPushPending = true;
   clearTimeout(_pushTimer);
-  _pushTimer = setTimeout(async () => {
-    cloudPushPending = false;
-    _isSaving = true;
-    setSyncStatus("syncing");
-    try {
-      const { db, doc, updateDoc, serverTimestamp } = window.fb;
-      const ref = doc(db, "estoques", workspaceId);
-      await updateDoc(ref, {
-        items: items,
-        marceneiros: marceneiros,
-        lembretes: lembretes,
-        saidas: saidas,
-        saidasHistorico: saidasHistorico,
-        saidaPrecos: saidaPrecos,
-        reservas: reservas,
+  _pushTimer = setTimeout(_cloudPushAgora, 600);
+}
+
+// CORREÇÃO v30: o envio agora é uma TRANSAÇÃO — lê o que está na nuvem, junta com o
+// que está no aparelho e só então grava. Antes cada aparelho sobrescrevia o documento
+// inteiro com a sua cópia, apagando lançamentos feitos nos outros celulares.
+async function _cloudPushAgora() {
+  if (!workspaceId || !window.fb) return false;
+  if (_isSaving) { cloudPushPending = true; return false; }
+  clearTimeout(_pushTimer);
+  cloudPushPending = false;
+  _isSaving = true;
+  setSyncStatus("syncing");
+  const seq = _sujoSeq;
+  let ok = false;
+  try {
+    const { db, doc, runTransaction, serverTimestamp } = window.fb;
+    const ref = doc(db, "estoques", workspaceId);
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw new Error("Estoque não encontrado na nuvem");
+      const data = snap.data();
+      _absorverDeletados(data.deletedIds);
+      tx.update(ref, {
+        items: _mergePorTs(items, data.items),
+        marceneiros: _mergePorTs(marceneiros, data.marceneiros),
+        saidas: _mergePorTs(saidas, data.saidas),
+        saidasHistorico: _mergePorTs(saidasHistorico, data.saidasHistorico),
+        reservas: _mergePorTs(reservas, data.reservas),
+        lembretes: _mergeLembretes(lembretes, data.lembretes),
+        saidaPrecos: (_sujo.precos || !data.saidaPrecos) ? saidaPrecos : data.saidaPrecos,
         deletedIds: _deletedIds,
         updatedAt: serverTimestamp()
       });
-      setSyncStatus("online");
-    } catch(e) {
-      console.error("Erro cloudPush:", e);
-      setSyncStatus("error");
-    } finally {
-      _isSaving = false;
-      if (cloudPushPending) cloudPush();
-    }
-  }, 600);
+    });
+    if (seq === _sujoSeq) _limparSujo();
+    clearTimeout(_retryTimer);
+    setSyncStatus("online");
+    ok = true;
+  } catch(e) {
+    console.error("Erro cloudPush:", e);
+    setSyncStatus(navigator.onLine ? "error" : "offline");
+    // tenta de novo sozinho; offline, o evento "online" refaz a sincronização
+    clearTimeout(_retryTimer);
+    _retryTimer = setTimeout(() => { if (navigator.onLine && !_isSaving) _cloudPushAgora(); }, 20000);
+  } finally {
+    _isSaving = false;
+    if (cloudPushPending) { clearTimeout(_pushTimer); _pushTimer = setTimeout(_cloudPushAgora, 600); }
+  }
+  return ok;
 }
 
 function _mostrarToast(msg, ms) {
@@ -3533,22 +3641,64 @@ function _mostrarToast(msg, ms) {
   t._timer = setTimeout(() => t.classList.remove("show"), ms || 2000);
 }
 
+// Botão 🔄: sincronização manual completa — baixa, junta e envia o que faltar.
+// (Antes ele descartava o que ainda não tinha subido deste aparelho.)
 async function cloudPullComFeedback() {
   const btn = document.getElementById("btnAtualizar");
   if (btn) { btn.innerHTML = '<span class="girando">🔄</span>'; btn.disabled = true; }
-  _mostrarToast("Atualizando…", 5000);
+  _mostrarToast("Atualizando…", 8000);
   const totalAntes = items.reduce((s,i)=>s+Number(i.qtd||0),0);
   try {
-    await cloudPull(true);
+    await cloudPull();
+    const enviado = await _cloudPushAgora();
+    if (!enviado && !_isSaving) throw new Error("envio falhou");
     const totalDepois = items.reduce((s,i)=>s+Number(i.qtd||0),0);
     const diff = totalDepois - totalAntes;
     if (diff > 0)      _mostrarToast("✅ +" + diff + " un atualizadas");
     else if (diff < 0) _mostrarToast("✅ Atualizado (" + diff + " un)");
     else               _mostrarToast("✅ Já está atualizado");
   } catch(e) {
-    _mostrarToast("⚠️ Erro ao atualizar");
+    _mostrarToast(navigator.onLine ? "⚠️ Erro ao atualizar" : "⚠️ Sem internet — salvo neste aparelho", 3500);
   } finally {
     if (btn) { btn.innerHTML = '🔄'; btn.disabled = false; }
+  }
+}
+
+// Aplica no aparelho o que veio da nuvem.
+// forcar=true: substitui tudo pelo que está na nuvem (só ao entrar num estoque).
+function _aplicarRemoto(data, forcar) {
+  _isApplyingRemote = true;
+  try {
+    _absorverDeletados(data.deletedIds);
+    if (forcar) {
+      items           = Array.isArray(data.items) ? data.items : [];
+      marceneiros     = Array.isArray(data.marceneiros) ? data.marceneiros : [];
+      saidas          = Array.isArray(data.saidas) ? data.saidas : [];
+      saidasHistorico = Array.isArray(data.saidasHistorico) ? data.saidasHistorico : [];
+      reservas        = Array.isArray(data.reservas) ? data.reservas : [];
+      lembretes       = (data.lembretes && typeof data.lembretes === "object") ? data.lembretes : {};
+      saidaPrecos     = (data.saidaPrecos && typeof data.saidaPrecos === "object") ? data.saidaPrecos : {};
+      _limparSujo();
+    } else {
+      if (Array.isArray(data.items))           items           = _mergePorTs(items, data.items, true);
+      if (Array.isArray(data.marceneiros))     marceneiros     = _mergePorTs(marceneiros, data.marceneiros, true);
+      if (Array.isArray(data.saidas))          saidas          = _mergePorTs(saidas, data.saidas, true);
+      if (Array.isArray(data.saidasHistorico)) saidasHistorico = _mergePorTs(saidasHistorico, data.saidasHistorico, true);
+      if (Array.isArray(data.reservas))        reservas        = _mergePorTs(reservas, data.reservas, true);
+      if (data.lembretes && typeof data.lembretes === "object") lembretes = _mergeLembretes(lembretes, data.lembretes, true);
+      if (!_sujo.precos && data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
+    }
+    _persistirLocal();
+    try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); } catch(e){}
+    atualizarBtnSaidas();
+  } finally { _isApplyingRemote = false; }
+  // Se este aparelho tem algo que a nuvem não tem, envia (sem mexer em cloudPushPending/sujo)
+  if (!forcar && _precisaPush(data)) {
+    cloudPushPending = true;
+    clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(_cloudPushAgora, 600);
+  } else if (!_isSaving) {
+    setSyncStatus("online");
   }
 }
 
@@ -3560,28 +3710,10 @@ async function cloudPull(forcarRemoto) {
     const { db, doc, getDoc } = window.fb;
     const snap = await getDoc(doc(db, "estoques", workspaceId));
     if (!snap.exists()) { setSyncStatus("online"); return; }
-    const data = snap.data();
-    _isApplyingRemote = true;
-    try {
-      if (Array.isArray(data.deletedIds)) {
-        data.deletedIds.forEach(id => { if (!_deletedIds.includes(String(id))) _deletedIds.push(String(id)); });
-        localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
-      }
-      if (Array.isArray(data.items))           items           = forcarRemoto ? (data.items || [])           : _mergePorTs(items, data.items);
-      if (Array.isArray(data.marceneiros))     marceneiros     = forcarRemoto ? (data.marceneiros || [])     : _mergePorTs(marceneiros, data.marceneiros);
-      if (Array.isArray(data.saidas))          saidas          = forcarRemoto ? (data.saidas || [])          : _mergePorTs(saidas, data.saidas);
-      if (Array.isArray(data.saidasHistorico)) saidasHistorico = forcarRemoto ? (data.saidasHistorico || []) : _mergePorTs(saidasHistorico, data.saidasHistorico);
-      if (Array.isArray(data.reservas))        reservas        = forcarRemoto ? (data.reservas || [])        : _mergePorTs(reservas, data.reservas);
-      if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
-      if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-      _persistirLocal();
-      setSyncStatus("online");
-      try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); } catch(e){}
-      atualizarBtnSaidas();
-    } finally { _isApplyingRemote = false; }
+    _aplicarRemoto(snap.data(), !!forcarRemoto);
   } catch(e) {
     console.error("Erro cloudPull:", e);
-    setSyncStatus("error");
+    setSyncStatus(navigator.onLine ? "error" : "offline");
     throw e;
   }
 }
@@ -3594,30 +3726,20 @@ function cloudSubscribe() {
   if (_cloudUnsub) { _cloudUnsub(); _cloudUnsub = null; }
   _cloudUnsub = onSnapshot(ref, (snap) => {
     if (!snap.exists()) return;
-    const data = snap.data();
-    _isApplyingRemote = true;
-    try {
-      if (Array.isArray(data.deletedIds)) {
-        data.deletedIds.forEach(id => { if (!_deletedIds.includes(String(id))) _deletedIds.push(String(id)); });
-        localStorage.setItem("deletedIds", JSON.stringify(_deletedIds));
-      }
-      if (Array.isArray(data.items))           items           = _mergePorTs(items, data.items);
-      if (Array.isArray(data.marceneiros))     marceneiros     = _mergePorTs(marceneiros, data.marceneiros);
-      if (Array.isArray(data.saidas))          saidas          = _mergePorTs(saidas, data.saidas);
-      if (Array.isArray(data.saidasHistorico)) saidasHistorico = _mergePorTs(saidasHistorico, data.saidasHistorico);
-      if (Array.isArray(data.reservas))        reservas        = _mergePorTs(reservas, data.reservas);
-      if (data.lembretes && typeof data.lembretes === "object") lembretes = data.lembretes;
-      if (data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
-      _persistirLocal();
-      setSyncStatus("online");
-      try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); } catch(e){}
-      atualizarBtnSaidas();
-    } finally { _isApplyingRemote = false; }
+    _aplicarRemoto(snap.data(), false);
   }, (err) => {
     console.error("onSnapshot erro:", err);
     setSyncStatus("error");
   });
 }
+
+// Ao voltar para o app (tela ligada de novo), confere a nuvem
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && workspaceId && cloudReady && window.fb) {
+    if (!_cloudUnsub) cloudSubscribe();
+    cloudPull().catch(() => {});
+  }
+});
 // ============ TELA DE SETUP ============
 function mostrarSetup(){
   carregarDados(); carregarSaidas(); carregarReservas(); // carrega cache local pra detectar dados existentes
@@ -3744,11 +3866,11 @@ async function conectarAEstoque(codigo){
     cloudReady = true;
     fecharScanner(); fecharSetup();
     // Garante _ts nos dados locais antes de assinar
-    carregarDados(); carregarSaidas(); carregarReservas();
-    items.forEach(i => { if (!i._ts && i.id) { const n = Number(i.id); i._ts = (!isNaN(n) && n > 0) ? n : Date.now(); } });
-    marceneiros.forEach(m => { if (!m._ts && m.id) { const n = Number(m.id); m._ts = (!isNaN(n) && n > 0) ? n : Date.now(); } });
+    // v30: ao entrar num estoque, adota o que está na nuvem ANTES de assinar,
+    // para não misturar dados antigos deste aparelho no estoque dos outros.
+    _aplicarRemoto(snap.data(), true);
+    renderHome();
     cloudSubscribe();
-    setTimeout(() => cloudPull(true), 400);
   } catch(e){ console.error(e); document.getElementById("scannerErr").textContent = "Erro: " + e.message; }
 }
 
@@ -3855,8 +3977,14 @@ window.addEventListener("fb-ready", () => {
     workspaceId = ws;
     cloudReady = true;
     carregarDados(); carregarSaidas(); carregarReservas(); renderHome();
+    // v30: cópia de segurança dos dados deste aparelho, feita uma única vez antes da nova sincronização
+    try {
+      if (!localStorage.getItem("backup_pre_v30")) {
+        localStorage.setItem("backup_pre_v30", JSON.stringify({ quando: new Date().toISOString(), marceneiros, items, saidas, saidasHistorico, reservas, lembretes, saidaPrecos }));
+      }
+    } catch(e) { console.warn("backup_pre_v30 não coube:", e); }
     cloudSubscribe();
-    setTimeout(() => cloudPull(), 500);
+    setTimeout(() => cloudPull().catch(() => {}), 500);
   } else {
     mostrarSetup();
   }
@@ -3867,7 +3995,7 @@ window.addEventListener("online", () => {
   if (workspaceId && cloudReady) {
     setSyncStatus("syncing");
     if (!_cloudUnsub) cloudSubscribe();
-    setTimeout(() => cloudPull(), 1500);
+    setTimeout(() => cloudPull().catch(() => {}), 1500);
   }
 });
 window.addEventListener("offline", () => {
