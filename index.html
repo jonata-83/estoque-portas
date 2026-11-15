@@ -752,7 +752,7 @@
 </script>
 
 <script>
-const VERSAO = "v31";
+const VERSAO = "v32";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -943,7 +943,7 @@ function toggleAddForm(){
   else document.getElementById("inputNovo").value="";
 }
 function addMarceneiro(){
-  const inp=document.getElementById("inputNovo");const nome=inp.value.trim();if(!nome)return;
+  const inp=document.getElementById("inputNovo");const nome=inp.value.replace(/\s+/g," ").trim();if(!nome)return;
   marceneiros.push(_touchTs({id:generateId(),nome}));salvarDados();inp.value="";
   document.getElementById("addCard").classList.remove("show");renderHome();
 }
@@ -1161,7 +1161,7 @@ function abrirPrecoSaida(chave, nome, largura) {
   document.getElementById("precoApagarBtn").style.display = (atual != null && atual > 0) ? "block" : "none";
   const m = getMarceneiro();
   const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
-  const outrasLarguras = mSaidas.filter(s => (s.nome||"").toLowerCase().trim() === (nome||"").toLowerCase().trim());
+  const outrasLarguras = mSaidas.filter(s => _normNome(s.nome) === _normNome(nome));
   document.getElementById("precoAplicarTodas").style.display = outrasLarguras.length > 1 ? "block" : "none";
   document.getElementById("precoOverlay").style.display = "block";
   const panel = document.getElementById("precoPanel");
@@ -1241,7 +1241,7 @@ function confirmarPrecoSaida(aplicarTodas) {
     const m = getMarceneiro();
     const mSaidas = saidas.filter(s => s.marceneiroId === m.id);
     mSaidas.forEach(s => {
-      if ((s.nome||"").toLowerCase().trim() === (_precoSaidaNome||"").toLowerCase().trim()) {
+      if (_normNome(s.nome) === _normNome(_precoSaidaNome)) {
         const ch = _chavePrecoSaida(m.id, s.nome, s.largura);
         if (val > 0) saidaPrecos[ch] = val;
         else delete saidaPrecos[ch];
@@ -1431,12 +1431,36 @@ function carregarSaidas() {
   try { saidas = JSON.parse(localStorage.getItem("saidas")) || []; } catch { saidas = []; }
   try { saidasHistorico = JSON.parse(localStorage.getItem("saidasHistorico")) || []; } catch { saidasHistorico = []; }
   try { saidaPrecos = JSON.parse(localStorage.getItem("saidaPrecos")) || {}; } catch { saidaPrecos = {}; }
+  saidaPrecos = _normalizarChavesPrecos(saidaPrecos);
 }
 function salvarSaidas() { localStorage.setItem("saidas", JSON.stringify(saidas));cloudPush();atualizarBtnSaidas(); }
 function salvarSaidasHistorico() { localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico)); cloudPush(); }
 function salvarSaidaPrecos() { localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos)); _marcarSujo("precos"); cloudPush(); }
+// v32: nome "normalizado" — ignora maiúsculas/minúsculas e espaços a mais (inclusive no meio).
+// Assim "Amarela Fixa Lisa  Adelmo" (2 espaços) e "Amarela Fixa Lisa Adelmo" são o MESMO produto.
+function _normNome(nome) {
+  return String(nome == null ? "" : nome).toLowerCase().replace(/\s+/g, " ").trim();
+}
 function _chavePrecoSaida(marceneiroId, nome, largura) {
-  return String(marceneiroId) + "||" + (nome || "").toLowerCase().trim() + "||" + String(largura);
+  return String(marceneiroId) + "||" + _normNome(nome) + "||" + String(largura);
+}
+// v32: converte as chaves de preço já gravadas para o formato normalizado (não perde preço nenhum).
+// Se existir a mesma chave nos dois formatos, vale a que já estava normalizada.
+function _normalizarChavesPrecos(obj) {
+  if (!obj || typeof obj !== "object") return {};
+  const out = {};
+  const pendentes = [];
+  Object.keys(obj).forEach(k => {
+    const partes = String(k).split("||");
+    if (partes.length < 3) { out[k] = obj[k]; return; }
+    const larg = partes.pop();
+    const id = partes.shift();
+    const nk = id + "||" + _normNome(partes.join("||")) + "||" + larg;
+    if (nk === k) out[k] = obj[k];
+    else pendentes.push([nk, obj[k]]);
+  });
+  pendentes.forEach(([nk, v]) => { if (out[nk] == null) out[nk] = v; });
+  return out;
 }
 
 function atualizarBtnSaidas() {
@@ -1890,7 +1914,7 @@ function renderSaidas() {
     const itemAtual = s.itemId ? items.find(i => i.id === s.itemId) : null;
     const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : s.nome;
     const sAtual = { ...s, nome: nomeAtual };
-    const chave = nomeAtual + "||" + s.largura;
+    const chave = _normNome(nomeAtual) + "||" + s.largura;
     if (grupos[chave]) {
       grupos[chave].qtd += Number(s.qtd);
     } else {
@@ -1900,12 +1924,13 @@ function renderSaidas() {
   // Ordenar: agrupado por espécie (mais recente primeiro), e dentro de cada espécie do MAIOR cm pro MENOR
   const speciesLastIndex = {};
   raw.forEach((s, i) => {
-    const k = (s.nome || "").toLowerCase().trim();
+    const itemAtualK = s.itemId ? items.find(it => it.id === s.itemId) : null;
+    const k = _normNome(itemAtualK ? _nomeItemCategoria(itemAtualK) : s.nome);
     speciesLastIndex[k] = i;
   });
   const agrupados = Object.values(grupos).sort((a, b) => {
-    const ka = (a.nome || "").toLowerCase().trim();
-    const kb = (b.nome || "").toLowerCase().trim();
+    const ka = _normNome(a.nome);
+    const kb = _normNome(b.nome);
     if (ka !== kb) return (speciesLastIndex[kb] ?? 0) - (speciesLastIndex[ka] ?? 0);
     return Number(b.largura) - Number(a.largura);
   });
@@ -1952,7 +1977,7 @@ function renderSaidas() {
     }
 
     porCatS[cat].forEach((s, idx) => {
-    const speciesKey = (s.nome || "").toLowerCase().trim();
+    const speciesKey = _normNome(s.nome);
     if (lastSpeciesKey !== null && lastSpeciesKey !== speciesKey) {
       appendSubtotal();
       speciesAcc = 0;
@@ -2056,7 +2081,11 @@ function confirmarDevolver(){
   // Pega todos os matches e ordena por id desc (mais recente primeiro)
   const indices = [];
   saidas.forEach((s, i) => {
-    if (s.marceneiroId === marcId && s.nome === nome && String(s.largura) === String(largura)) indices.push(i);
+    if (s.marceneiroId !== marcId || String(s.largura) !== String(largura)) return;
+    // v32: mesma regra do agrupamento da tela (nome atual do estoque, ignorando espaços a mais e maiúsculas)
+    const itAt = s.itemId ? items.find(it => it.id === s.itemId) : null;
+    const nomeS = itAt ? _nomeItemCategoria(itAt) : s.nome;
+    if (_normNome(nomeS) === _normNome(nome)) indices.push(i);
   });
   indices.sort((a,b) => (saidas[b].id||0) - (saidas[a].id||0));
   const idsRemover = [];
@@ -2070,7 +2099,8 @@ function confirmarDevolver(){
   saidas = saidas.filter(s => !idsRemover.includes(s.id));
 
   // Adicionar de volta ao estoque
-  const item = items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela") || (i.categoria === "outro" && nome === "Outro")) && String(i.largura) === String(largura));
+  const item = (devolverAtual.itemId ? items.find(i => i.id === devolverAtual.itemId && i.marceneiroId === marcId && String(i.largura) === String(largura)) : null)
+    || items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.tipo && _normNome(i.tipo) === _normNome(nome)) || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela") || (i.categoria === "outro" && nome === "Outro")) && String(i.largura) === String(largura));
   if (item){
     item.qtd = Number(item.qtd) + val; _touchTs(item);
   } else {
@@ -2612,7 +2642,7 @@ function _prepararBlocosSaidas(mSaidas, opts) {
   mSaidas.forEach(s => {
     const itemAtual = s.itemId ? items.find(i => i.id === s.itemId) : null;
     const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : s.nome;
-    const chave = nomeAtual + "||" + s.largura;
+    const chave = _normNome(nomeAtual) + "||" + s.largura;
     if (grupos[chave]) grupos[chave].qtd += Number(s.qtd);
     else grupos[chave] = { ...s, nome: nomeAtual, qtd: Number(s.qtd) };
   });
@@ -2620,12 +2650,12 @@ function _prepararBlocosSaidas(mSaidas, opts) {
   mSaidas.forEach((s, i) => {
     const itemAtual = s.itemId ? items.find(it => it.id === s.itemId) : null;
     const nomeAtual = itemAtual ? _nomeItemCategoria(itemAtual) : s.nome;
-    const k = (nomeAtual || "").toLowerCase().trim();
+    const k = _normNome(nomeAtual);
     speciesLastIndex[k] = i;
   });
   const agrupados = Object.values(grupos).sort((a, b) => {
-    const ka = (a.nome || "").toLowerCase().trim();
-    const kb = (b.nome || "").toLowerCase().trim();
+    const ka = _normNome(a.nome);
+    const kb = _normNome(b.nome);
     if (ka !== kb) return (speciesLastIndex[kb] ?? 0) - (speciesLastIndex[ka] ?? 0);
     return Number(b.largura) - Number(a.largura);
   });
@@ -2637,8 +2667,8 @@ function _prepararBlocosSaidas(mSaidas, opts) {
   let blocoAtual = [];
 
   agrupados.forEach(it => {
-    const especie = (it.nome || "").trim();
-    if (especie !== lastEspecie) {
+    const especie = (it.nome || "").replace(/\s+/g, " ").trim();
+    if (lastEspecie === null || _normNome(especie) !== _normNome(lastEspecie)) {
       if (blocoAtual.length) {
         blocos.push({ especie: lastEspecie, sub: subAcc, itens: blocoAtual });
       }
@@ -3705,7 +3735,7 @@ function _aplicarRemoto(data, forcar) {
       saidasHistorico = Array.isArray(data.saidasHistorico) ? data.saidasHistorico : [];
       reservas        = Array.isArray(data.reservas) ? data.reservas : [];
       lembretes       = (data.lembretes && typeof data.lembretes === "object") ? data.lembretes : {};
-      saidaPrecos     = (data.saidaPrecos && typeof data.saidaPrecos === "object") ? data.saidaPrecos : {};
+      saidaPrecos     = (data.saidaPrecos && typeof data.saidaPrecos === "object") ? _normalizarChavesPrecos(data.saidaPrecos) : {};
       _limparSujo();
     } else {
       if (Array.isArray(data.items))           items           = _mergePorTs(items, data.items, true);
@@ -3714,7 +3744,7 @@ function _aplicarRemoto(data, forcar) {
       if (Array.isArray(data.saidasHistorico)) saidasHistorico = _mergePorTs(saidasHistorico, data.saidasHistorico, true);
       if (Array.isArray(data.reservas))        reservas        = _mergePorTs(reservas, data.reservas, true);
       if (data.lembretes && typeof data.lembretes === "object") lembretes = _mergeLembretes(lembretes, data.lembretes, true);
-      if (!_sujo.precos && data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = data.saidaPrecos;
+      if (!_sujo.precos && data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = _normalizarChavesPrecos(data.saidaPrecos);
     }
     _persistirLocal();
     try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); } catch(e){}
@@ -3815,7 +3845,7 @@ async function criarWorkspace(estadoInicial){
     marceneiros = estadoInicial.marceneiros; items = estadoInicial.items;
     lembretes = estadoInicial.lembretes;     saidas = estadoInicial.saidas;
     saidasHistorico = estadoInicial.saidasHistorico || [];
-    saidaPrecos = estadoInicial.saidaPrecos || {};
+    saidaPrecos = _normalizarChavesPrecos(estadoInicial.saidaPrecos || {});
     reservas = estadoInicial.reservas || [];
     _persistirLocal();
     fecharSetup();
