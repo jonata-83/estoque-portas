@@ -752,7 +752,7 @@
 </script>
 
 <script>
-const VERSAO = "v33";
+const VERSAO = "v34";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -1405,7 +1405,22 @@ function salvar(){
   if (!linhas.length) return;
   _salvandoLanc = true;
   const dataStr = new Date().toLocaleDateString("pt-BR");
+  // CORREÇÃO v34: se já existe a mesma porta (mesmo marceneiro, categoria,
+  // nome e largura), SOMA na linha existente em vez de criar outra linha igual.
+  let somados = 0;
   linhas.forEach((ln) => {
+    const existente = items.find(i =>
+      _sameId(i.marceneiroId, selectedId) &&
+      (i.categoria || "porta") === (tipoAtual || "porta") &&
+      _normNome(i.tipo || "") === _normNome(tipo || "") &&
+      String(i.largura).trim() === String(ln.largura).trim()
+    );
+    if (existente) {
+      existente.qtd = Number(existente.qtd) + ln.qtd;
+      _touchTs(existente);
+      somados++;
+      return;
+    }
     items.push(_touchTs({
       id: generateId(),
       marceneiroId: selectedId,
@@ -1419,7 +1434,9 @@ function salvar(){
   salvarDados();
   const btn=document.getElementById("btnSalvar");
   btn.disabled = true;
-  btn.textContent = linhas.length > 1 ? `✓ ${linhas.length} lançamentos salvos!` : "✓ Salvo!";
+  btn.textContent = somados > 0
+    ? (linhas.length > 1 ? `✓ Salvo! (${somados} somado${somados>1?"s":""} ao existente)` : "✓ Somado ao existente!")
+    : (linhas.length > 1 ? `✓ ${linhas.length} lançamentos salvos!` : "✓ Salvo!");
   btn.classList.add("done");
   btn.style.background = "linear-gradient(135deg,#5a9e6e,#3a7a50)";
   setTimeout(()=>{_salvandoLanc=false;btn.disabled=false;btn.textContent="Salvar Lançamento";btn.classList.remove("done");btn.style.background="linear-gradient(135deg,#3a7bd5,#2a5aa8)";renderHistorico();renderHome();irView("tipo")},1200);
