@@ -752,7 +752,7 @@
 </script>
 
 <script>
-const VERSAO = "v32";
+const VERSAO = "v33";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -1026,12 +1026,23 @@ function renderHistorico(){
 function buildHistItem(item,list){
   const nome=_nomeItemCategoria(item);
   // Calcular reservado para este item
-  const reservado = reservas.filter(r =>
-    r.marceneiroId === item.marceneiroId && (
-      (item.id && r.itemId === item.id) ||
-      (r.nome === nome && String(r.largura) === String(item.largura))
-    )
-  ).reduce((s,r) => s + Number(r.qtd), 0);
+  // CORREÇÃO v33: a reserva feita numa linha só desconta daquela linha.
+  // Antes, se existiam duas linhas com o mesmo nome e largura (ex.: 106 e 35
+  // de "Jatobá Fixa tubarão 80cm"), a reserva aparecia nas duas, porque também
+  // comparava por nome+largura. Agora: se a reserva tem itemId e esse item ainda
+  // existe, vale SÓ o itemId. Nome+largura fica só para reservas antigas sem
+  // itemId (ou cujo item foi apagado) — e, nesse caso, só na primeira linha
+  // igual, para nunca contar a mesma reserva duas vezes.
+  const reservado = reservas.filter(r => {
+    if (r.marceneiroId !== item.marceneiroId) return false;
+    if (r.itemId && items.some(i => _sameId(i.id, r.itemId))) {
+      return _sameId(r.itemId, item.id);
+    }
+    if (r.nome !== nome || String(r.largura) !== String(item.largura)) return false;
+    const primeira = items.find(i => i.marceneiroId === item.marceneiroId &&
+      _nomeItemCategoria(i) === nome && String(i.largura) === String(item.largura));
+    return !primeira || _sameId(primeira.id, item.id);
+  }).reduce((s,r) => s + Number(r.qtd), 0);
   const disponivel = Math.max(0, Number(item.qtd) - reservado);
   const qtdExibida = reservado > 0 ? disponivel : item.qtd;
   const medidas=`<span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px;color:var(--text)">${qtdExibida}</span><span style="font-size:var(--fs-sep);font-weight:300;color:var(--text2);margin:0 4px">|</span><span style="font-size:var(--fs-medida);font-weight:900;letter-spacing:-0.5px">${item.largura}</span><span style="font-size:var(--fs-cm);font-weight:400">cm</span>`;
