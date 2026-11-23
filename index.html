@@ -752,7 +752,7 @@
 </script>
 
 <script>
-const VERSAO = "v34";
+const VERSAO = "v35";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -3095,7 +3095,7 @@ function renderSaidasHistList() {
     const itensHtml = h.itens.map(i => `<div class="saidas-hist-item">${i.qtd} | ${i.largura}cm  ${i.nome || ""}</div>`).join("");
     return `
       <div class="saidas-hist-card">
-        <div class="saidas-hist-head" onclick="toggleSaidasHistCard(${h.id})" style="cursor:pointer">
+        <div class="saidas-hist-head" onclick="toggleSaidasHistCard('${h.id}')" style="cursor:pointer">
           <div>
             <div class="saidas-hist-data">${h.data}</div>
             ${h.motorista ? `<div class="saidas-hist-motorista">Motorista: ${h.motorista}</div>` : ""}
@@ -3105,11 +3105,11 @@ function renderSaidasHistList() {
         <div id="saidasHistBody${h.id}" class="saidas-hist-body" style="display:none">
           <div class="saidas-hist-itens">${itensHtml}</div>
           <div class="saidas-hist-acoes">
-            <button onclick="reenviarSaidasHistPNG(${h.id}, this)" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2)">🖼️</button>
-            <button onclick="reenviarSaidasHistTexto(${h.id})" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366">💬</button>
-            <button onclick="excluirSaidasHist(${h.id})" title="Excluir" style="background:transparent;border:1px solid #e0505044;color:#e05050">🗑️</button>
+            <button onclick="reenviarSaidasHistPNG('${h.id}', this)" title="Gerar PNG" style="background:transparent;border:1px solid var(--border2);color:var(--text2)">🖼️</button>
+            <button onclick="reenviarSaidasHistTexto('${h.id}')" title="Enviar por WhatsApp" style="background:transparent;border:1px solid #25D36644;color:#25D366">💬</button>
+            <button onclick="excluirSaidasHist('${h.id}')" title="Excluir" style="background:transparent;border:1px solid #e0505044;color:#e05050">🗑️</button>
           </div>
-          <button onclick="toggleSaidasHistCard(${h.id})" title="Fechar" style="margin-top:8px;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:8px;font-size:14px;cursor:pointer;font-family:Georgia,serif">✕ Fechar</button>
+          <button onclick="toggleSaidasHistCard('${h.id}')" title="Fechar" style="margin-top:8px;width:100%;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:8px;font-size:14px;cursor:pointer;font-family:Georgia,serif">✕ Fechar</button>
         </div>
       </div>`;
   }).join("");
