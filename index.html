@@ -207,6 +207,25 @@
   .saidas-hist-itens{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
   .saidas-hist-item{font-size:12px;color:var(--text2);font-family:Georgia,serif}
   .saidas-hist-acoes{display:flex;gap:8px}
+  .lanc-filtros{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .lanc-filtros::-webkit-scrollbar{display:none}
+  .lanc-chip{background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:Georgia,serif;white-space:nowrap;flex-shrink:0}
+  .lanc-chip.on{background:var(--accent);color:#1a1610;border-color:var(--accent);font-weight:bold}
+  .lanc-dia{display:flex;justify-content:space-between;align-items:baseline;margin:10px 2px 2px;font-size:12px;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+  .lanc-dia:first-child{margin-top:0}
+  .lanc-dia small{color:var(--text2);text-transform:none;letter-spacing:0;font-size:11px}
+  .lanc-card{background:var(--bg3);border:1px solid var(--border2);border-left:4px solid var(--border2);border-radius:10px;padding:10px 12px;cursor:pointer}
+  .lanc-top{display:flex;align-items:center;gap:8px}
+  .lanc-ico{font-size:18px;flex-shrink:0}
+  .lanc-tit{flex:1;min-width:0;font-size:14px;color:var(--text);font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lanc-hora{font-size:12px;color:var(--text2);flex-shrink:0}
+  .lanc-linhas{margin-top:6px;display:flex;flex-direction:column;gap:2px}
+  .lanc-linha{font-size:15px;color:var(--text);font-family:Georgia,serif}
+  .lanc-linha b{font-weight:900}
+  .lanc-tag{font-size:10px;color:var(--text2);border:1px solid var(--border2);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+  .lanc-acoes{display:none;margin-top:10px;gap:8px}
+  .lanc-card.aberto .lanc-acoes{display:flex}
+  .lanc-acoes button{flex:1;border-radius:8px;padding:9px;font-size:13px;cursor:pointer;font-family:Georgia,serif;background:transparent}
   .saidas-hist-acoes button{flex:1;border-radius:8px;padding:10px;font-size:18px;cursor:pointer;font-family:Georgia,serif}
   /* MENU MOVIMENTAÇÃO */
   .move-nome{font-size:16px;color:var(--text);font-weight:bold;text-align:center}
@@ -588,6 +607,24 @@
   <div id="saidasHistList" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px"></div>
 </div>
 
+<!-- PAINEL HISTÓRICO DE LANÇAMENTOS (v36) -->
+<div id="lancHistPanel" style="position:fixed;top:0;bottom:0;left:0;right:0;z-index:311;background:var(--bg2);display:none;flex-direction:column;height:100vh;height:100dvh">
+  <div class="saidas-header">
+    <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden">
+      <span class="saidas-title" style="font-size:13px;white-space:nowrap">🕘 Histórico</span>
+      <span id="lancHistNomeLabel" style="font-size:13px;color:var(--text);font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+    </div>
+    <button onclick="fecharLancHistorico()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:20px;cursor:pointer;padding:2px 12px;border-radius:8px;font-family:Georgia,serif;flex-shrink:0;white-space:nowrap;line-height:1;font-weight:bold">✕</button>
+  </div>
+  <div style="padding:10px 14px 8px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+    <div id="lancHistFiltros" class="lanc-filtros"></div>
+    <div style="position:relative">
+      <input id="lancHistBusca" placeholder="🔍  Buscar por nome ou medida…" oninput="lancHistBusca=this.value;renderLancHistList()" style="width:100%;background:var(--input-bg);border:1px solid var(--border2);border-radius:10px;padding:9px 14px;color:var(--text);font-size:14px;font-family:Georgia,serif;outline:none"/>
+    </div>
+  </div>
+  <div id="lancHistList" style="flex:1;overflow-y:auto;padding:12px 14px 30px;display:flex;flex-direction:column;gap:8px"></div>
+</div>
+
 <!-- MENU MOVIMENTAÇÃO -->
 <div id="moveOverlay2" onclick="fecharMoveMenu()" style="position:fixed;inset:0;z-index:299;display:none;background:#00000055"></div>
 <div id="moveMenu" style="position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--bg2);border-top:1px solid var(--border2);border-radius:20px 20px 0 0;padding:20px 16px 36px;display:none;flex-direction:column;gap:14px;box-shadow:0 -8px 40px #00000070;transform:translateY(100%);transition:transform .25s ease;overflow-y:auto;max-height:90vh">
@@ -752,7 +789,7 @@
 </script>
 
 <script>
-const VERSAO = "v35";
+const VERSAO = "v36";
 const CORES=[["#c8a96e","#8b6e3f"],["#7eb8a4","#3d7a6a"],["#e08060","#a04020"],["#9b7bb8","#6a4a8a"],["#6fa3d1","#3a6fa0"],["#d4a060","#9a6020"]];
 const TEMAS={'':'t-escuro','theme-claro':'t-claro','theme-floresta':'t-floresta','theme-noturno':'t-noturno','theme-cinza':'t-cinza'};
 let marceneiros=[],items=[],selectedId=null,tipoAtual=null,viewAtual="home",editingId=null,fabOpen=false,deleteId=null,lembretes={};
@@ -775,6 +812,7 @@ function _persistirLocal() {
   localStorage.setItem("saidasHistorico", JSON.stringify(saidasHistorico));
   localStorage.setItem("saidaPrecos", JSON.stringify(saidaPrecos));
   localStorage.setItem("reservas", JSON.stringify(reservas));
+  localStorage.setItem("lancHistorico", JSON.stringify(lancHistorico));
 }
 
 // Scroll header
@@ -893,7 +931,9 @@ function renderHome(){
   if(elO)elO.textContent=to;
 
   marceneiros.forEach(m=>{
-    const[light,dark]=CORES[m.id%CORES.length];
+    // v36: id pode ser texto (UUID) — antes dava erro e a tela inicial não carregava
+    const _n=Number(m.id);const _h=!isNaN(_n)?_n:String(m.id).split("").reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,0);
+    const[light,dark]=CORES[Math.abs(_h)%CORES.length];
     const p=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="porta").reduce((s,i)=>s+Number(i.qtd),0);
     const j=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="janela").reduce((s,i)=>s+Number(i.qtd),0);
     const o=items.filter(i=>i.marceneiroId===m.id&&i.categoria==="outro").reduce((s,i)=>s+Number(i.qtd),0);
@@ -1007,6 +1047,7 @@ function renderHistorico(){
       <div class="hist-title" style="margin:0">Lançamentos${filtroInfo}</div>
       <button onclick="alternarModoOrdem()" style="background:transparent;border:1px solid var(--border2);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Georgia,serif;line-height:1;letter-spacing:.5px">${modoManual ? '✋ Manual' : '↕ Auto'}</button>
       <button id="btnAtualizar" onclick="cloudPullComFeedback()" title="Atualizar" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🔄</button>
+      <button onclick="abrirLancHistorico()" title="Histórico de lançamentos" style="background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;line-height:1">🕘</button>
     </div>
     <div style="display:flex;align-items:center;gap:6px;padding-right:28px"><span style="font-size:11px;color:var(--text2);letter-spacing:1px">TOTAL</span><span style="font-size:22px;font-weight:900;color:var(--accent)">${totalQtd}</span><span style="font-size:12px;color:var(--text2)">un</span></div>
   </div>
@@ -1281,10 +1322,15 @@ function confirmarDelete(){
       items = items.filter(i => i.marceneiroId !== deleteMarcId);
       _registrarDelete(saidas.filter(s => s.marceneiroId === deleteMarcId).map(s => s.id));
       saidas = saidas.filter(s => s.marceneiroId !== deleteMarcId);
+      _registrarDelete(lancHistorico.filter(h => _sameId(h.marceneiroId, deleteMarcId)).map(h => h.id));
+      lancHistorico = lancHistorico.filter(h => !_sameId(h.marceneiroId, deleteMarcId));
       salvarDados(); salvarSaidas(); fecharDeleteMenu(); renderHome();
       deleteMarcId = null; return;
     }
     if(!deleteId)return;
+    const _itDel=items.find(i=>_sameId(i.id,deleteId));
+    if(_itDel) _logLanc("exclusao",{marceneiroId:_itDel.marceneiroId,categoria:_itDel.categoria,itemId:_itDel.id,nome:_nomeItemCategoria(_itDel),
+      linhas:[{qtd:Number(_itDel.qtd),largura:_itDel.largura}]});
     _registrarDelete([deleteId]);
     items=items.filter(i=>!_sameId(i.id,deleteId));
     salvarDados();fecharDeleteMenu();renderHistorico();renderHome();
@@ -1351,10 +1397,16 @@ function fecharModal(){document.getElementById("modalOverlay").classList.remove(
 function salvarEdicao(){
   
   const idx=items.findIndex(i=>_sameId(i.id,editingId));if(idx===-1)return;
+  const _antesEd={nome:_nomeItemCategoria(items[idx]),qtd:Number(items[idx].qtd),largura:String(items[idx].largura)};
   items[idx].tipo=document.getElementById("eTipo").value;
   items[idx].qtd=Number(document.getElementById("eQtd").value);
   items[idx].largura=document.getElementById("eLarg").value;
   _touchTs(items[idx]);
+  const _depoisEd={nome:_nomeItemCategoria(items[idx]),qtd:Number(items[idx].qtd),largura:String(items[idx].largura)};
+  if(_antesEd.nome!==_depoisEd.nome||_antesEd.qtd!==_depoisEd.qtd||_antesEd.largura!==_depoisEd.largura){
+    _logLanc("edicao",{marceneiroId:items[idx].marceneiroId,categoria:items[idx].categoria,itemId:items[idx].id,nome:_depoisEd.nome,
+      linhas:[{qtd:_depoisEd.qtd,largura:_depoisEd.largura}],antes:_antesEd});
+  }
   const _id=editingId;
   salvarDados();fecharModal();renderHistorico();renderHome();
   setTimeout(()=>flashCard(_id),80);
@@ -1419,10 +1471,14 @@ function salvar(){
       existente.qtd = Number(existente.qtd) + ln.qtd;
       _touchTs(existente);
       somados++;
+      ln.somado = true;
+      ln.itemId = existente.id;
       return;
     }
+    const novoId = generateId();
+    ln.itemId = novoId;
     items.push(_touchTs({
-      id: generateId(),
+      id: novoId,
       marceneiroId: selectedId,
       categoria: tipoAtual,
       tipo: tipo,
@@ -1431,6 +1487,8 @@ function salvar(){
       data: dataStr
     }));
   });
+  // v36: grava no histórico de lançamentos
+  _logLanc("lanc", { marceneiroId: selectedId, categoria: tipoAtual, nome: (tipo || "").trim(), linhas: linhas });
   salvarDados();
   const btn=document.getElementById("btnSalvar");
   btn.disabled = true;
@@ -1455,7 +1513,9 @@ function flashCard(id) {
 let saidas = [];
 let saidasHistorico = [];
 let saidaPrecos = {};
+let lancHistorico = [];
 function carregarSaidas() {
+  try { lancHistorico = JSON.parse(localStorage.getItem("lancHistorico")) || []; } catch { lancHistorico = []; }
   try { saidas = JSON.parse(localStorage.getItem("saidas")) || []; } catch { saidas = []; }
   try { saidasHistorico = JSON.parse(localStorage.getItem("saidasHistorico")) || []; } catch { saidasHistorico = []; }
   try { saidaPrecos = JSON.parse(localStorage.getItem("saidaPrecos")) || {}; } catch { saidaPrecos = {}; }
@@ -2129,6 +2189,9 @@ function confirmarDevolver(){
   // Adicionar de volta ao estoque
   const item = (devolverAtual.itemId ? items.find(i => i.id === devolverAtual.itemId && i.marceneiroId === marcId && String(i.largura) === String(largura)) : null)
     || items.find(i => i.marceneiroId === marcId && (i.tipo === nome || (i.tipo && _normNome(i.tipo) === _normNome(nome)) || (i.categoria === "porta" && nome === "Porta") || (i.categoria === "janela" && nome === "Janela") || (i.categoria === "outro" && nome === "Outro")) && String(i.largura) === String(largura));
+  _logLanc("devolucao", { marceneiroId: marcId, categoria: devolverAtual.categoria || (item && item.categoria) || "porta",
+    itemId: item ? item.id : null, nome: nome, linhas: [{ qtd: val, largura: largura }],
+    saldoAntes: item ? Number(item.qtd) : 0 });
   if (item){
     item.qtd = Number(item.qtd) + val; _touchTs(item);
   } else {
@@ -2401,6 +2464,7 @@ function _executarMove(sinal, val, idx) {
   const antes = items[idx].qtd;
   if (sinal === '+') {
     items[idx].qtd = antes + val; _touchTs(items[idx]);
+    _logLancItem("entrada", items[idx], val, antes);
     document.getElementById("moveFeedback").style.color = "#4eb86a";
     document.getElementById("moveFeedback").textContent = `+${val} → Novo saldo: ${items[idx].qtd}`;
   } else {
@@ -2410,6 +2474,7 @@ function _executarMove(sinal, val, idx) {
       return;
     }
     items[idx].qtd = antes - val; _touchTs(items[idx]);
+    _logLancItem("saida", items[idx], val, antes);
     document.getElementById("moveFeedback").style.color = "#e05050";
     document.getElementById("moveFeedback").textContent = `-${val} → Novo saldo: ${items[idx].qtd}`;
     // Registrar saída
@@ -3134,6 +3199,181 @@ function reenviarSaidasHistTexto(id) {
   const mSaidas = h.itens.map(i => ({ ...i, qtd: Number(i.qtd) }));
   _enviarTexto(_montarTextoSaidas(m, mSaidas, { motorista: h.motorista || "", hoje: h.data }));
 }
+// ===========================================================
+// v36: HISTÓRICO DE LANÇAMENTOS
+// Registra tudo que mexe na quantidade do estoque: lançamento novo,
+// entrada (+), saída (−), devolução, edição e exclusão.
+// Só é um registro — apagar daqui NÃO altera o estoque.
+// ===========================================================
+const LANC_HIST_MAX = 800; // limite para não estourar o documento na nuvem
+const LANC_TIPOS = {
+  lanc:      { ico: "📥", rot: "Lançamento", cor: "#3a7bd5", sinal: "+" },
+  entrada:   { ico: "➕", rot: "Entrada",    cor: "#2a9a50", sinal: "+" },
+  saida:     { ico: "➖", rot: "Saída",      cor: "#e05050", sinal: "−" },
+  devolucao: { ico: "↩️", rot: "Devolução",  cor: "#2a9a50", sinal: "+" },
+  edicao:    { ico: "✏️", rot: "Edição",     cor: "#c8a96e", sinal: ""  },
+  exclusao:  { ico: "🗑️", rot: "Excluído",   cor: "#888888", sinal: ""  }
+};
+const LANC_FILTROS = [
+  ["todos", "Todos"], ["lanc", "📥 Lançamentos"], ["entrada", "➕ Entradas"],
+  ["saida", "➖ Saídas"], ["devolucao", "↩️ Devoluções"], ["edicao", "✏️ Edições"], ["exclusao", "🗑️ Excluídos"]
+];
+let lancHistFiltro = "todos", lancHistBusca = "";
+
+function _limitarLancHist() {
+  if (lancHistorico.length <= LANC_HIST_MAX) return;
+  lancHistorico = lancHistorico.slice().sort((a, b) => (b.quando || 0) - (a.quando || 0)).slice(0, LANC_HIST_MAX);
+}
+function _escHtml(t) {
+  return String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function _logLanc(tipo, dados) {
+  try {
+    const agora = new Date();
+    const m = marceneiros.find(x => _sameId(x.id, dados.marceneiroId));
+    lancHistorico.unshift(_touchTs({
+      id: generateId(),
+      tipo: tipo,
+      marceneiroId: dados.marceneiroId,
+      marceneiroNome: m ? m.nome : "",
+      categoria: dados.categoria || "porta",
+      itemId: dados.itemId || null,
+      nome: dados.nome || "",
+      linhas: (dados.linhas || []).map(l => {
+        const o = { qtd: Number(l.qtd), largura: String(l.largura) };
+        if (l.somado) o.somado = true;
+        if (l.saldoAntes != null) o.saldoAntes = Number(l.saldoAntes);
+        return o;
+      }),
+      antes: dados.antes || null,
+      saldoAntes: dados.saldoAntes != null ? Number(dados.saldoAntes) : null,
+      quando: agora.getTime(),
+      data: agora.toLocaleDateString("pt-BR"),
+      hora: agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    }));
+    _limitarLancHist();
+    localStorage.setItem("lancHistorico", JSON.stringify(lancHistorico));
+  } catch (e) { console.warn("Erro ao registrar histórico:", e); }
+}
+function _logLancItem(tipo, item, qtd, saldoAntes) {
+  _logLanc(tipo, {
+    marceneiroId: item.marceneiroId, categoria: item.categoria, itemId: item.id,
+    nome: _nomeItemCategoria(item), linhas: [{ qtd: qtd, largura: item.largura }], saldoAntes: saldoAntes
+  });
+}
+
+function abrirLancHistorico() {
+  const m = getMarceneiro(); if (!m) return;
+  document.getElementById("lancHistNomeLabel").textContent = m.nome;
+  lancHistFiltro = "todos"; lancHistBusca = "";
+  document.getElementById("lancHistBusca").value = "";
+  renderLancHistList();
+  document.getElementById("lancHistPanel").style.display = "flex";
+  document.getElementById("lancHistList").scrollTop = 0;
+}
+function fecharLancHistorico() {
+  document.getElementById("lancHistPanel").style.display = "none";
+}
+function setLancHistFiltro(f) { lancHistFiltro = f; renderLancHistList(); }
+
+function renderLancHistList() {
+  const m = getMarceneiro();
+  const div = document.getElementById("lancHistList");
+  const filtrosDiv = document.getElementById("lancHistFiltros");
+  if (!m) { div.innerHTML = ""; return; }
+  const doMarc = lancHistorico.filter(h => _sameId(h.marceneiroId, m.id));
+  const contagem = {};
+  doMarc.forEach(h => { contagem[h.tipo] = (contagem[h.tipo] || 0) + 1; });
+  filtrosDiv.innerHTML = LANC_FILTROS
+    .filter(([k]) => k === "todos" || contagem[k] || lancHistFiltro === k)
+    .map(([k, r]) => `<button class="lanc-chip${lancHistFiltro === k ? " on" : ""}" onclick="setLancHistFiltro('${k}')">${r}</button>`).join("");
+
+  let lista = lancHistFiltro === "todos" ? doMarc : doMarc.filter(h => h.tipo === lancHistFiltro);
+  const busca = _normNome(lancHistBusca || "");
+  if (busca) {
+    lista = lista.filter(h => {
+      const txt = _normNome((h.nome || "") + " " + (h.linhas || []).map(l => l.largura + "cm " + l.largura).join(" ") + (h.antes ? " " + h.antes.nome : ""));
+      return txt.includes(busca);
+    });
+  }
+  lista = lista.slice().sort((a, b) => (b.quando || 0) - (a.quando || 0));
+
+  if (!lista.length) {
+    div.innerHTML = `<div class="saidas-vazio">${doMarc.length ? "Nada encontrado com esse filtro." : "Nenhum lançamento registrado ainda.<br><small>Os próximos lançamentos vão aparecer aqui.</small>"}</div>`;
+    return;
+  }
+
+  // Agrupa por dia, com totais de entrada e saída do dia
+  const hojeStr = new Date().toLocaleDateString("pt-BR");
+  const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+  const ontemStr = ontem.toLocaleDateString("pt-BR");
+  const grupos = [];
+  lista.forEach(h => {
+    let g = grupos[grupos.length - 1];
+    if (!g || g.data !== h.data) { g = { data: h.data, itens: [] }; grupos.push(g); }
+    g.itens.push(h);
+  });
+
+  div.innerHTML = grupos.map(g => {
+    let ent = 0, sai = 0;
+    g.itens.forEach(h => {
+      const q = (h.linhas || []).reduce((s, l) => s + Number(l.qtd || 0), 0);
+      if (h.tipo === "lanc" || h.tipo === "entrada" || h.tipo === "devolucao") ent += q;
+      else if (h.tipo === "saida") sai += q;
+    });
+    const rotDia = g.data === hojeStr ? "Hoje · " + g.data : (g.data === ontemStr ? "Ontem · " + g.data : g.data);
+    const resumo = [ent ? `<span style="color:#4eb86a">+${ent}</span>` : "", sai ? `<span style="color:#e05050">−${sai}</span>` : ""].filter(Boolean).join(" &nbsp;");
+    return `<div class="lanc-dia"><span>${rotDia}</span><small>${resumo}</small></div>` + g.itens.map(_cardLancHist).join("");
+  }).join("");
+}
+
+function _cardLancHist(h) {
+  const t = LANC_TIPOS[h.tipo] || LANC_TIPOS.lanc;
+  const emojiCat = _emojiCategoria(h.categoria);
+  const nome = _escHtml(h.nome || (h.categoria === "janela" ? "Janela" : h.categoria === "outro" ? "Outro" : "Porta"));
+  let linhas = "";
+  if (h.tipo === "edicao" && h.antes) {
+    const a = h.antes, d = (h.linhas || [])[0] || {};
+    const partes = [];
+    if (String(a.qtd) !== String(d.qtd)) partes.push(`Qtd: <b>${a.qtd}</b> → <b>${d.qtd}</b>`);
+    if (String(a.largura) !== String(d.largura)) partes.push(`Largura: <b>${_escHtml(a.largura)}</b> → <b>${_escHtml(d.largura)}</b>cm`);
+    if (a.nome !== h.nome) partes.push(`Nome: ${_escHtml(a.nome)} → ${nome}`);
+    linhas = partes.map(p => `<div class="lanc-linha">${p}</div>`).join("") || `<div class="lanc-linha">${d.qtd} | ${_escHtml(d.largura)}cm</div>`;
+  } else {
+    linhas = (h.linhas || []).map(l => {
+      const saldo = (h.saldoAntes != null && (h.tipo === "entrada" || h.tipo === "saida" || h.tipo === "devolucao"))
+        ? `<span class="lanc-tag">saldo ${h.saldoAntes} → ${h.tipo === "saida" ? h.saldoAntes - l.qtd : h.saldoAntes + Number(l.qtd)}</span>` : "";
+      const som = l.somado ? `<span class="lanc-tag">somado ao existente</span>` : "";
+      return `<div class="lanc-linha"><span style="color:${t.cor}">${t.sinal}</span><b>${l.qtd}</b> <span style="color:var(--text2)">|</span> <b>${_escHtml(l.largura)}</b>cm${som}${saldo}</div>`;
+    }).join("");
+  }
+  const totalQ = (h.linhas || []).reduce((s, l) => s + Number(l.qtd || 0), 0);
+  const totalTxt = (h.tipo === "lanc" && (h.linhas || []).length > 1) ? `<div style="font-size:12px;color:var(--text2);margin-top:4px">Total: <b style="color:var(--text)">${totalQ}</b> un</div>` : "";
+  return `<div class="lanc-card" id="lancCard${h.id}" style="border-left-color:${t.cor}" onclick="this.classList.toggle('aberto')">
+    <div class="lanc-top">
+      <span class="lanc-ico">${t.ico}</span>
+      <span class="lanc-tit">${emojiCat} ${nome}</span>
+      <span class="lanc-hora">${_escHtml(h.hora || "")}</span>
+    </div>
+    <div style="font-size:11px;color:${t.cor};letter-spacing:1px;text-transform:uppercase;margin-top:2px">${t.rot}</div>
+    <div class="lanc-linhas">${linhas}</div>
+    ${totalTxt}
+    <div class="lanc-acoes">
+      <button onclick="event.stopPropagation();excluirLancHist('${h.id}')" style="border:1px solid #e0505044;color:#e05050">🗑️ Apagar do histórico</button>
+    </div>
+  </div>`;
+}
+
+function excluirLancHist(id) {
+  _pedirConfirmacao("Apagar este registro do histórico? O estoque não muda.", () => {
+    _registrarDelete([id]);
+    lancHistorico = lancHistorico.filter(h => !_sameId(h.id, id));
+    localStorage.setItem("lancHistorico", JSON.stringify(lancHistorico));
+    cloudPush();
+    renderLancHistList();
+  }, "Apagar");
+}
+
 function excluirSaidasHist(id) {
   pedirSenha(() => {
     _registrarDelete([id]);
@@ -3657,6 +3897,7 @@ function _precisaPush(data) {
       || _temNovidadeLocal(saidas, data.saidas)
       || _temNovidadeLocal(saidasHistorico, data.saidasHistorico)
       || _temNovidadeLocal(reservas, data.reservas)
+      || _temNovidadeLocal(lancHistorico, data.lancHistorico)
       || _lembretesTemNovidade(data.lembretes);
 }
 
@@ -3689,7 +3930,10 @@ async function _cloudPushAgora() {
       if (!snap.exists()) throw new Error("Estoque não encontrado na nuvem");
       const data = snap.data();
       _absorverDeletados(data.deletedIds);
+      lancHistorico = _mergePorTs(lancHistorico, data.lancHistorico);
+      _limitarLancHist();
       tx.update(ref, {
+        lancHistorico: lancHistorico,
         items: _mergePorTs(items, data.items),
         marceneiros: _mergePorTs(marceneiros, data.marceneiros),
         saidas: _mergePorTs(saidas, data.saidas),
@@ -3762,6 +4006,7 @@ function _aplicarRemoto(data, forcar) {
       saidas          = Array.isArray(data.saidas) ? data.saidas : [];
       saidasHistorico = Array.isArray(data.saidasHistorico) ? data.saidasHistorico : [];
       reservas        = Array.isArray(data.reservas) ? data.reservas : [];
+      lancHistorico   = Array.isArray(data.lancHistorico) ? data.lancHistorico : [];
       lembretes       = (data.lembretes && typeof data.lembretes === "object") ? data.lembretes : {};
       saidaPrecos     = (data.saidaPrecos && typeof data.saidaPrecos === "object") ? _normalizarChavesPrecos(data.saidaPrecos) : {};
       _limparSujo();
@@ -3771,11 +4016,13 @@ function _aplicarRemoto(data, forcar) {
       if (Array.isArray(data.saidas))          saidas          = _mergePorTs(saidas, data.saidas, true);
       if (Array.isArray(data.saidasHistorico)) saidasHistorico = _mergePorTs(saidasHistorico, data.saidasHistorico, true);
       if (Array.isArray(data.reservas))        reservas        = _mergePorTs(reservas, data.reservas, true);
+      if (Array.isArray(data.lancHistorico))   { lancHistorico = _mergePorTs(lancHistorico, data.lancHistorico, true); _limitarLancHist(); }
       if (data.lembretes && typeof data.lembretes === "object") lembretes = _mergeLembretes(lembretes, data.lembretes, true);
       if (!_sujo.precos && data.saidaPrecos && typeof data.saidaPrecos === "object") saidaPrecos = _normalizarChavesPrecos(data.saidaPrecos);
     }
     _persistirLocal();
     try { if (viewAtual === "home") renderHome(); else if (viewAtual === "tipo") renderHistorico(); } catch(e){}
+    try { if (document.getElementById("lancHistPanel").style.display === "flex") renderLancHistList(); } catch(e){}
     atualizarBtnSaidas();
   } finally { _isApplyingRemote = false; }
   // Se este aparelho tem algo que a nuvem não tem, envia (sem mexer em cloudPushPending/sujo)
@@ -3842,10 +4089,10 @@ async function setupCriarEstoque(){
 
 async function setupMigrarLocal(){
   // Garante _ts em todos os dados locais antes de subir
-  [items, marceneiros, saidas, saidasHistorico, reservas].forEach(arr => {
+  [items, marceneiros, saidas, saidasHistorico, reservas, lancHistorico].forEach(arr => {
     if (Array.isArray(arr)) arr.forEach(i => { if (i && !i._ts) { const n = Number(i.id); i._ts = (!isNaN(n) && n > 0) ? n : Date.now(); } });
   });
-  await criarWorkspace({ marceneiros, items, lembretes, saidas, saidasHistorico, saidaPrecos, reservas });
+  await criarWorkspace({ marceneiros, items, lembretes, saidas, saidasHistorico, saidaPrecos, reservas, lancHistorico });
 }
 
 async function criarWorkspace(estadoInicial){
@@ -3865,6 +4112,7 @@ async function criarWorkspace(estadoInicial){
       saidasHistorico: garantirTs(estadoInicial.saidasHistorico || []),
       saidaPrecos: estadoInicial.saidaPrecos || {},
       reservas: garantirTs(estadoInicial.reservas || []),
+      lancHistorico: garantirTs(estadoInicial.lancHistorico || []),
       createdAt: serverTimestamp(), updatedAt: serverTimestamp()
     });
     workspaceId = codigo;
@@ -3875,6 +4123,7 @@ async function criarWorkspace(estadoInicial){
     saidasHistorico = estadoInicial.saidasHistorico || [];
     saidaPrecos = _normalizarChavesPrecos(estadoInicial.saidaPrecos || {});
     reservas = estadoInicial.reservas || [];
+    lancHistorico = estadoInicial.lancHistorico || [];
     _persistirLocal();
     fecharSetup();
     abrirQRCode(codigo, true);

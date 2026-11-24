@@ -1,4 +1,4 @@
-const CACHE_NAME = 'estoque-portas-v1';
+const CACHE_NAME = 'estoque-portas-v36';
 const urlsToCache = [
   '/',
   '/index.html',
